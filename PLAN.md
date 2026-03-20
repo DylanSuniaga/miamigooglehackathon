@@ -1,5 +1,11 @@
 # Hivemind — Implementation Plan
 
+## Vision & Positioning
+
+Hivemind is the workspace where product teams and AI agents think, decide, and build together. It bridges two worlds that have stayed stubbornly separate: the messy, human process of ideation and product decision-making, and the structured, executable world of AI agent systems.
+
+Primary audience: Technical founders, AI engineers, and product managers at product-based businesses — the people who are both building AI agent systems and trying to ship products faster with them. Hivemind is built for both, simultaneously.
+
 ## Context
 
 Building **Hivemind** for a hackathon: a channel-based AI workspace where teams collaborate with AI agents as first-class participants. Agents brainstorm, critique, architect, and research alongside humans. Auth is deferred — focus on getting agents and the platform working first.
@@ -8,29 +14,84 @@ Building **Hivemind** for a hackathon: a channel-based AI workspace where teams 
 
 ---
 
-## Design Direction (from reference screenshot)
+## The Two Core Features
 
-**Light theme** inspired by the Slack-like reference image:
+Everything else in this document is a power multiplier built on top of these two pillars.
+
+### Core 1 — AI-Native Team Chat (The Chat IS the IDE)
+
+A channel-based collaboration workspace where AI agents are first-class participants — not sidebar tools, not separate tabs. Humans and agents brainstorm, challenge, specify, and plan together in the same stream. When the team is ready to act, an execution agent launches directly from the conversation and ships the result back into the channel.
+
+The fundamental loop:
+**Think → Decide → Act → Learn → Think**
+
+- Teams brainstorm in shared channels with thinking agents (@brainstorm, @critic, @architect, @researcher)
+- A system agent (@context) automatically extracts decisions, action items, and assumptions into a structured context layer in real time
+- Execution agents (Dev, PM, GTM, QA) read from the accumulated context and take real actions — opening GitHub PRs, creating tickets, drafting launch copy
+- All agent activity streams back into the channel so the whole team sees progress live
+- The AI steps into human conversations proactively — not just when @mentioned, but when it has something relevant to add
+
+### Core 2 — Agent Management Layer (Neat, Structured, Fast)
+
+The primary problem Hivemind solves for teams building with AI: context clutter. Every agent has its own context. Every tool has its own context. Documents get injected into main agent contexts. Subagents have their own tool lists. Tracking all of this across an agent architecture becomes unmanageable fast — slowing deployment and building speed.
+
+Hivemind provides a single, clean place to:
+- Define and configure agents — system prompts, models, temperature, tool access, all in one view
+- Manage context injection — see exactly what documents, decisions, and history each agent receives
+- Map subagent hierarchies — visualize how agents relate to each other and what flows between them
+- Monitor and update agents on the fly — change an agent's behavior mid-session without rebuilding
+- Track agent runs — see what each execution agent did, what it produced, and whether it succeeded
+
+The agent management layer is what separates Hivemind from "AI-native Slack." It makes the platform valuable to the engineer building the system, not just the PM using it.
+
+---
+
+## Thinking Agents — The In-Channel AI Team
+
+Five default thinking agents ship with every workspace. Each uses a different frontier model via OpenRouter, demonstrating that the best tool for each job is not always the same LLM.
+
+| Agent | Model | Temp | Role |
+|---|---|---|---|
+| 🧠 **@brainstorm** | Gemini 3.0 Flash | 0.9 — divergent | Creative ideation; generates 5-8 unexpected ideas per response, riffs on teammate input |
+| 🔍 **@critic** | Claude Sonnet | 0.4 — analytical | Identifies blind spots, challenges assumptions, frames every critique as a question |
+| 📐 **@architect** | GPT-4o | 0.3 — precise | Translates ideas into buildable specs: components, data models, APIs, MVP scope |
+| 📊 **@researcher** | Gemini 2.5 Pro | 0.3 — grounded | Web search via Tavily; provides cited, data-backed market and feasibility analysis |
+| 🧭 **@context** | Gemini 2.5 Flash | 0.2 — structured | Extracts decisions, actions, and assumptions; answers "what did we decide about X?" |
+
+---
+
+## Design Direction
+
+**Light/Dark theme** inspired by the Slack-like reference image with minimal builder tool aesthetics:
 - Two-level sidebar: narrow icon rail (left edge) + channel list panel
 - Channels section with `#` prefix and unread badges
 - Messages with circular avatars, bold sender names, muted timestamps
 - Clean message input bar with "Message #channel" placeholder
-- White/light gray backgrounds, subtle borders
+- White/light gray backgrounds, subtle borders (Or Dark: #0C0C0D / Surface #141416)
 - Icons for notifications, settings in channel header
+- Font: DM Sans (body) + JetBrains Mono (code/badges)
 
-| Token | Value |
+| Token | Light Theme Value | Dark Theme Value (Builder UI) |
+|-------|-------|-------|
+| Background | `#FFFFFF` | `#0C0C0D` — near-black |
+| Surface/Sidebar | `#F8F8F8` | `#141416` — slightly lighter |
+| Icon rail | `#3F0E40` (dark purple) | (match surface) |
+| Border | `#E0E0E0` | `rgba(255,255,255,0.06)` |
+| Text primary | `#1D1C1D` | `#E4E4E7` — high-contrast white |
+| Text muted | `#616061` | `rgba(255,255,255,0.5)` — muted |
+
+**Agent Colors:**
+| Agent | Color |
 |-------|-------|
-| Background | `#FFFFFF` |
-| Surface/Sidebar | `#F8F8F8` |
-| Icon rail | `#3F0E40` (dark purple, like Slack) |
-| Border | `#E0E0E0` |
-| Text primary | `#1D1C1D` |
-| Text muted | `#616061` |
-| Agent: Brainstorm | `#E8593C` |
-| Agent: Critic | `#7F77DD` |
-| Agent: Architect | `#1D9E75` |
-| Agent: Researcher | `#378ADD` |
-| Agent: Context | `#BA7517` |
+| @brainstorm | `#E8593C` coral — left border + tinted bg on messages |
+| @critic | `#7F77DD` purple — left border + tinted bg on messages |
+| @architect | `#1D9E75` green — left border + tinted bg on messages |
+| @researcher | `#378ADD` blue — left border + tinted bg on messages |
+| @context | `#BA7517` amber — left border + tinted bg on messages |
+
+- Model badges: Monospace, small, muted — JetBrains Mono
+- Streaming cursor: Thin vertical bar in agent color, blinking
+- Agent progress: Thin progress bar with status-colored fill
 
 ---
 
@@ -38,218 +99,176 @@ Building **Hivemind** for a hackathon: a channel-based AI workspace where teams 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Next.js 16 (App Router) |
+| Framework | Next.js 15/16 (App Router) |
 | Styling | Tailwind CSS 4 + shadcn/ui |
-| AI | Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`) |
+| AI / Streaming | Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`) |
+| Auth | Supabase Auth — GitHub OAuth (Deferred for now) |
 | Database | Supabase Postgres |
-| Real-time | Supabase Realtime (Broadcast + Postgres Changes) |
-| Auth | Deferred — hardcoded demo user for now |
-| Web search | Tavily API (Phase 6) |
-| Deploy | Vercel + Supabase Cloud |
+| Vector search | Supabase pgvector |
+| Real-time | Supabase Realtime (Postgres Changes + Broadcast) |
+| Job queue | Supabase pgmq |
+| Scheduling | Supabase pg_cron |
+| Agent runtime | Supabase Edge Functions + Background Tasks |
+| LLM gateway | OpenRouter (OpenAI-compatible API) |
+| Web search | Tavily API (Phase 4/6) |
+| Code sandbox | E2B (`@e2b/code-interpreter`) |
+| GitHub integration | Octokit (`@octokit/rest`) |
+| Deploy | Vercel (frontend) + Supabase Cloud (backend) |
 
 ---
 
-## Progressive Build Steps
+## Project Structure
 
-### Step 1: Project Scaffold
-**Goal:** Empty Next.js 16 app running locally, ready to push to repo.
-
-- `npx create-next-app@canary hivemind --typescript --tailwind --app`
-- Install core deps: `@supabase/supabase-js @supabase/ssr ai @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google zod react-markdown date-fns`
-- `npx shadcn@latest init`
-- Add shadcn components: `button input textarea tabs badge scroll-area avatar separator tooltip`
-- Create `.env.local` template
-- Create `CLAUDE.md`
-- Initialize git, connect to team repo
-
-**Files:** `package.json`, `.env.local`, `CLAUDE.md`, `tailwind.config.ts`
-
-**Verify:** `npm run dev` → see default Next.js page at localhost:3000
-
----
-
-### Step 2: UI Shell (No Data)
-**Goal:** Static layout matching the reference screenshot — sidebar + channel view + message input. All hardcoded/mock data.
-
-- Build icon rail (narrow left sidebar with icons: messages, people, starred, etc.)
-- Build channel sidebar panel ("Messages" header, "Channels" section with #general, #product-launch, #eng-standup)
-- Build channel header ("# general" + icons)
-- Build message list with 3-4 hardcoded mock messages (avatars, names, timestamps, content)
-- Build message input bar ("Message #general" placeholder, emoji/@ buttons, send button)
-- Style everything to match the light theme from the screenshot
-
-**Files:**
-- `app/layout.tsx` — root layout
-- `app/page.tsx` — main workspace view (no routing needed yet)
-- `components/layout/icon-rail.tsx`
-- `components/layout/channel-sidebar.tsx`
-- `components/layout/channel-header.tsx`
-- `components/chat/message-list.tsx`
-- `components/chat/message-bubble.tsx`
-- `components/chat/message-input.tsx`
-
-**Verify:** localhost:3000 looks like the reference screenshot with mock data
-
----
-
-### Step 3: Supabase + Database
-**Goal:** Real database with schema, seed data, and Supabase client wired up.
-
-- `npx supabase init`
-- Create migration with all tables (see schema below)
-- Set up Supabase project, get keys, fill `.env.local`
-- Create `lib/supabase/client.ts` (browser client)
-- Create `lib/supabase/server.ts` (server client with service role)
-- Create `lib/types.ts` (TypeScript types matching DB schema)
-- Run migration + verify seed data exists
-
-**Files:**
-- `supabase/migrations/00001_initial_schema.sql`
-- `lib/supabase/client.ts`
-- `lib/supabase/server.ts`
-- `lib/types.ts`
-
-**Verify:** Supabase dashboard shows all tables with seed data (workspace, channels, agents)
-
----
-
-### Step 4: Live Data + Real-time Chat
-**Goal:** Replace mock data with real Supabase data. Messages persist and sync across tabs via Realtime.
-
-- Use a hardcoded demo user (skip auth): `{ id: 'demo-user-id', username: 'demo', display_name: 'Demo User' }`
-- Fetch channels from Supabase, render in sidebar
-- Fetch messages for selected channel, render in message list
-- INSERT messages on send
-- Subscribe to Supabase Postgres Changes for new messages (INSERT events)
-- Add channel switching (click channel in sidebar → load that channel's messages)
-- Auto-scroll on new messages
-- Create `hooks/use-channel-messages.ts`
-- Create `hooks/use-workspace.ts`
-
-**Files:**
-- `hooks/use-channel-messages.ts`
-- `hooks/use-workspace.ts`
-- Update `components/chat/message-input.tsx` (real send)
-- Update `components/chat/message-list.tsx` (real data + realtime)
-- Update `components/layout/channel-sidebar.tsx` (real channels)
-
-**Verify:** Open 2 browser tabs. Send a message in tab 1 → appears instantly in tab 2.
-
----
-
-### Step 5: Thinking Agents (Core AI)
-**Goal:** @mention an agent in chat, it streams a response visible to all users in real-time.
-
-- Create `lib/ai.ts` — multi-provider model resolver:
-  ```typescript
-  import { openai } from '@ai-sdk/openai';
-  import { anthropic } from '@ai-sdk/anthropic';
-  import { google } from '@ai-sdk/google';
-
-  export function getModel(modelString: string) {
-    const [provider, ...rest] = modelString.split(':');
-    const modelId = rest.join(':');
-    switch (provider) {
-      case 'openai': return openai(modelId);
-      case 'anthropic': return anthropic(modelId);
-      case 'google': return google(modelId);
-      default: throw new Error(`Unknown provider: ${provider}`);
-    }
-  }
-  ```
-- Create `POST /api/agent/invoke` route:
-  1. Load agent config from Supabase (system_prompt, model, temperature)
-  2. Load last 50 messages for conversation context
-  3. Call `streamText()` from Vercel AI SDK
-  4. Broadcast tokens via Supabase Realtime Broadcast
-  5. On completion: INSERT final message into DB
-- Create `hooks/use-agent-streaming.ts` — Broadcast subscription for live tokens
-- Create `components/chat/streaming-message.tsx` — live tokens with blinking cursor
-- Update message-input to detect `@mentions` and trigger agent invocation
-- Build `components/chat/agent-mention-pills.tsx` — quick @agent buttons below input
-- Show model badge on agent messages (which LLM generated it)
-
-**Streaming architecture:**
-```
-Server: streamText() → for each chunk → broadcast to `stream:{channelId}`
-Client: subscribe to broadcast channel → show streaming-message component
-On done: server INSERTs final message → client gets Postgres Changes INSERT → replaces streaming UI with final message
+```text
+hivemind/
+├── app/
+│   ├── layout.tsx                    # Root layout with Supabase provider
+│   ├── page.tsx                      # Landing / redirect to workspace
+│   ├── login/page.tsx                # GitHub OAuth login
+│   ├── workspace/[workspaceId]/
+│   │   ├── layout.tsx                # Sidebar + main
+│   │   └── channel/[channelId]/page.tsx  # Chat + right panel
+│   └── api/
+│       ├── chat/route.ts             # Send message + invoke thinking agent
+│       ├── agent/invoke/route.ts     # Invoke a thinking agent
+│       ├── agent/launch/route.ts     # Launch execution agent
+│       ├── context/extract/route.ts  # Extract decisions/actions/assumptions
+│       ├── context/search/route.ts   # Semantic search over context
+│       └── webhook/agent-complete/   # Callback when agent finishes
+├── components/
+│   ├── layout/        # Sidebar, channel header, workspace provider
+│   ├── chat/          # Message list, bubble, input, streaming, system msgs
+│   ├── context-panel/ # Decisions, actions, assumptions, health widget
+│   ├── agents-panel/  # Thinking agents list, execution agent card, launcher
+│   └── agent-manager/ # Agent config editor, context map, hierarchy view
+├── hooks/
+│   ├── use-channel-messages.ts   # Realtime subscription
+│   ├── use-agent-runs.ts         # Execution agent status
+│   ├── use-context.ts            # Decisions, actions, assumptions
+│   └── use-workspace.ts          # Workspace + channels
+├── lib/
+│   ├── supabase/      # client.ts, server.ts, middleware.ts
+│   ├── openrouter.ts  # OpenRouter provider config
+│   └── agents/        # prompts.ts, tools.ts, context-extractor.ts
+└── supabase/
+    ├── migrations/    # Schema, extensions, functions, seed
+    └── functions/     # process-agent-job, embed-message
 ```
 
-**Env vars needed:**
-- `OPENAI_API_KEY` (for @architect using gpt-4o)
-- `ANTHROPIC_API_KEY` (for @critic using claude-sonnet-4)
-- `GOOGLE_GENERATIVE_AI_API_KEY` (for @brainstorm and @researcher using Gemini)
-
-**Files:**
-- `lib/ai.ts`
-- `app/api/agent/invoke/route.ts`
-- `hooks/use-agent-streaming.ts`
-- `components/chat/streaming-message.tsx`
-- `components/chat/agent-mention-pills.tsx`
-- Update `components/chat/message-bubble.tsx` (agent styling + model badge)
-
-**Verify:** Type "@brainstorm what should we build?" → agent streams a creative response. Type "@critic" → different model responds with analytical critique. Both visible across tabs.
-
 ---
 
-### Step 6: Context Layer
-**Goal:** Auto-extract decisions, actions, and assumptions from conversations into a structured panel.
+## Progressive Build Steps / Implementation Phases
 
-- Create `lib/agents/context-extractor.ts` — uses `generateObject()` with zod schema
-- Create `POST /api/context/extract` — batch extraction endpoint
-- Build right-side context panel with tabs: Decisions | Actions | Assumptions
-- Create `hooks/use-context.ts` — fetch context data for channel
-- Show context health summary (N decisions, N actions open, N assumptions)
-- Post system message when context is extracted
+Each phase produces a working, demoable state. Build in sequence.
 
-**Files:**
-- `lib/agents/context-extractor.ts`
-- `app/api/context/extract/route.ts`
-- `components/context-panel/context-panel.tsx`
-- `components/context-panel/decisions-tab.tsx`
-- `components/context-panel/actions-tab.tsx`
-- `components/context-panel/assumptions-tab.tsx`
-- `hooks/use-context.ts`
+### Phase 1: Foundation — Working Chat & Project Scaffold
+**Goal:** Empty Next.js app running locally, static UI shell, and real DB w/ synced messages.
 
-**Verify:** After a few agent responses, trigger extraction → right panel shows structured decisions and action items.
+- `npx create-next-app@latest hivemind --typescript --tailwind --app` (or 16-canary)
+- Install core deps: `@supabase/supabase-js`, `@supabase/ssr`, `ai`, `@ai-sdk/openai`, `zod`, `react-markdown`, `date-fns`
+- Set up shadcn/ui: `button, input, textarea, dialog, tabs, badge, scroll-area, avatar, dropdown-menu, separator, tooltip`
+- Create `.env.local` template, `CLAUDE.md`, initialize git.
+- Build UI Shell: workspace layout with left sidebar (channels), center (chat), right panel (empty).
+- Initialize Supabase (`npx supabase init`), run schema migration, set up GitHub OAuth.
+- Fetch channels from Supabase, render in sidebar.
+- Message list with Supabase Realtime subscription (INSERT + UPDATE events on messages table).
+- Message input with basic send (INSERT into messages table).
+- Message bubble — distinct styling for user / agent / system sender types.
+✓ **Milestone:** Users can log in (or use demo user), see channels, send messages, and messages appear in real-time across multiple browser tabs.
 
----
+### Phase 2: Thinking Agents — Core AI Experience
+**Goal:** @mention an agent in chat, it streams a response visible to all users.
 
-### Step 7: @researcher Web Search
+- `lib/openrouter.ts` — configure OpenRouter as an OpenAI-compatible provider for Vercel AI SDK (and fallback abstract multi-provider resolver `lib/ai.ts` if extending).
+- `POST /api/agent/invoke` — load agent config from DB, load last 50 messages, create placeholder row, stream via `streamText()`, update every ~8 tokens, finalize with `is_streaming=false`.
+- @mention detection in message input (regex: `@(\w+)`) with automatic agent invocation.
+- `streaming-message` component with animated cursor while `is_streaming=true`.
+- Agent-mention pills below input — quick-click buttons for each channel agent.
+- Show model badge on agent messages (which LLM generated it).
+- Typing indicator when any message in channel has `is_streaming=true`.
+✓ **Milestone:** Users can @mention any thinking agent; the agent streams a response visible to all users in real-time, with a model badge showing which LLM was used.
+
+### Phase 3: Context Layer — Structured Team Knowledge
+**Goal:** Auto-extract decisions, actions, and assumptions into a structured panel.
+
+- `lib/agents/context-extractor.ts` — uses `generateObject()` with Zod schema to extract decisions, actions, and assumptions after each agent response.
+- `POST /api/context/extract` — wrap extraction logic, auto-called after every thinking agent completes.
+- Context panel (right side): Decisions | Actions | Assumptions tabs.
+- Context health widget — N decisions, N/M actions done, N flagged assumptions.
+- `hooks/use-context.ts` — fetch context data with Realtime subscription for live updates.
+- Post system message when context is extracted.
+✓ **Milestone:** After agents respond, the system automatically extracts structured context. The right panel shows a living summary of decisions, owners, and flagged assumptions.
+
+### Phase 4: @researcher with Live Web Search
 **Goal:** @researcher can search the web and return grounded answers with citations.
 
-- Install `@tavily/core`
-- Define `webSearchTool` in `lib/agents/tools.ts`
-- Update `/api/agent/invoke` to pass tools when agent is @researcher
-- Format citations in responses
+- Install Tavily: `npm install @tavily/core`
+- Define `webSearchTool` in `lib/agents/tools.ts` using Tavily search (depth: advanced, maxResults: 5).
+- Pass tools to `/api/agent/invoke` when agent is @researcher (maxSteps: 5).
+- Format tool results with source citations inline in the message bubble.
+✓ **Milestone:** @researcher searches the web in real-time, returning grounded answers with citations directly in the channel.
 
-**Files:**
-- `lib/agents/tools.ts`
-- Update `app/api/agent/invoke/route.ts`
+### Phase 5: Agent Management Layer
+**Goal:** Engineers can define, configure, and monitor all agents from a single structured view.
 
-**Verify:** "@researcher what are the top competitors in X space?" → returns web results with source links.
+- Agent config editor — edit system prompt, model, temperature, tool access per agent.
+- Context injection manager — see and control exactly what documents/context each agent receives.
+- Subagent hierarchy visualizer — map parent/child agent relationships and data flow.
+- Agent run history — searchable log of every execution with inputs, outputs, steps, and status.
+- Live agent monitor — real-time view of which agents are active, queued, or failed.
+- Quick-edit for on-the-fly agent creation: name, emoji, prompt, model, tools — ship in 30 seconds.
+✓ **Milestone:** Engineers can define, configure, and monitor all agents from a single view. Context injection is explicit and auditable.
+
+### Phase 6: Execution Agents — The Differentiator
+**Goal:** Run actual tasks from the channel.
+
+- Install: `npm install @e2b/code-interpreter @octokit/rest`
+- Agent launcher modal — agent type, task description, model, context scope selector.
+- `POST /api/agent/launch` — assemble context snapshot, insert `agent_run`, push to pgmq, post system message.
+- Supabase Edge Function `process-agent-job` — dequeue, update status, run with tools, stream progress.
+- Dev agent tools: E2B sandbox (`runCode`, `writeFile`, `installDeps`), GitHub (`createBranch`, `commitFiles`, `openPR`).
+- PM/GTM agent tools: context queries, web search, action creation/update.
+- Execution agent card: status dot, progress bar, expandable step log, model badge.
+- `hooks/use-agent-runs.ts` — Realtime subscription on `agent_runs` per channel.
+✓ **Milestone:** Team leads launch execution agents. A dev agent opens an E2B sandbox, writes code/tests, opens a PR — streaming progress back.
+
+### Phase 7: Semantic Search + Embeddings
+**Goal:** All messages are embedded. Agents can semantically search everything.
+
+- Edge Function `embed-message` — triggered after each message insert, generates 1536-dim vector via OpenRouter/OpenAI.
+- `POST /api/context/search` — embed query, call `match_messages` Postgres function, return top results.
+- @context agent uses semantic search to answer questions across full channel history (not just last 50 msgs).
+✓ **Milestone:** Agents can semantically search full conversation history to answer questions about past decisions.
+
+### Phase 8: Polish, Demo Prep & Auth
+**Goal:** Production-ready demo with real flow.
+
+- Mobile responsive layout (sidebar collapses, right panel becomes a bottom sheet).
+- Markdown rendering in agent messages (code blocks, bold, lists, links).
+- Loading states and error handling for all API calls.
+- Empty states for channels with no messages and context panels with no data.
+- Setup Supabase Auth / GitHub OAuth fully.
+- Seed demo channel: human brainstorm → @brainstorm → @critic → @architect → @context extracts → dev agent launches → PR opened.
+- Deploy: vercel deploy + Supabase Edge Functions deployed.
+✓ **Milestone:** Production-ready, deployed, with a compelling demo channel pre-loaded.
 
 ---
 
-### Step 8: Auth (When Ready)
-**Goal:** Add real authentication. Can be GitHub OAuth, email/password, or magic link — keep it simple.
+## Bonus Power Features
 
-- Set up Supabase Auth provider
-- Build simple login page
-- Add middleware to protect routes
-- Replace hardcoded demo user with real auth user
-- Add profile creation trigger
+These four features make Hivemind a platform businesses pay for at scale. Build after the core is solid.
 
-*(Details deferred — implement when core platform is solid)*
+### Bonus 1 — Meta Agent: The Agent Builder
+A standardized AI agent available in any channel as `@build` that builds other agents (e.g., "we need an agent that monitors AWS costs"). Asks clarifying questions and generates the full spec (prompt, model, tools, memory structure, MCP integrations). Outputs agents directly into the Agent Management Layer using Claude Code-style loops with a Context7 MCP for frameworks lookup. Applies security best practices automatically.
 
----
+### Bonus 2 — Product Launch Analytics + Feedback Processing
+A centralized analytics workspace for product launches. Features a feedback ingestion pipeline (App Store, Zendesk, etc.), AI-powered synthesis surfacing top themes natively, a launch timeline view mapping milestones/metric snapshots, and anomaly tracking posted directly to channels. Includes on-demand exportable launch post-mortems via `@context`.
 
-### Step 9: Polish + Demo Prep
-- Markdown rendering in agent messages
-- Loading states, error handling, empty states
-- Mobile responsive layout
-- Seed a demo conversation showing the full agent collaboration flow
+### Bonus 3 — Market Research Agent
+A comprehensive research workflow. Triggered by `@researcher` intent or an execution launcher. Multi-step pipeline (competitive landscape → market sizing → customer segments). Outputs as a structured markdown report to the channel (with PDF generation). Integrates a competitor tracking mode returning a weekly digest in a dedicated channel, storing all findings in the context layer.
+
+### Bonus 4 — Ad Performance Tracking + Competitor Intelligence
+Read-only integrations to Meta, Google, TikTok, LinkedIn ads. Emits daily digests of ROAS, CPC, CTR tracking. An agent detects anomalies (e.g. "Google campaign X ROAS dropped 40%") and posts alerts natively in-channel. Uses Meta Ad Library to scrape competitor intelligence. Provides weekly AI optimization suggestions, expanding to custom ad agents via the Agent Builder.
 
 ---
 
@@ -260,6 +279,7 @@ File: `supabase/migrations/00001_initial_schema.sql`
 ```sql
 -- Extensions
 create extension if not exists vector;
+create extension if not exists pgmq;
 
 -- CORE TABLES
 create table workspaces (
@@ -313,6 +333,7 @@ create table messages (
   metadata jsonb default '{}',
   parent_message_id uuid references messages(id),
   embedding vector(1536),
+  is_streaming boolean default false,
   created_at timestamptz default now()
 );
 
@@ -468,42 +489,60 @@ insert into channel_members (channel_id, member_type, member_id) values
 
 ---
 
-## Key Patterns
+## Critical Implementation Details
 
-### Multi-Provider Model Resolver
+### Streaming Pattern — The Most Important UX Detail
+The streaming flow is what makes the product feel alive. The key is updating the Supabase message row every ~8 tokens so that all connected clients receive the content growth via Realtime subscriptions.
+
 ```typescript
-// lib/ai.ts
-import { openai } from '@ai-sdk/openai';
-import { anthropic } from '@ai-sdk/anthropic';
-import { google } from '@ai-sdk/google';
+// 1. Create placeholder message (is_streaming: true, content: "")
+// 2. Stream from OpenRouter via streamText()
+// 3. Accumulate tokens; UPDATE message row every 8 tokens
+// 4. Final UPDATE: content = full response, is_streaming = false
+//
+// Client side: useChannelMessages subscribes to postgres_changes
+// INSERT event → new message appears
+// UPDATE event → content grows as tokens arrive
 
-export function getModel(modelString: string) {
-  const [provider, ...rest] = modelString.split(':');
-  const modelId = rest.join(':');
-  switch (provider) {
-    case 'openai': return openai(modelId);
-    case 'anthropic': return anthropic(modelId);
-    case 'google': return google(modelId);
-    default: throw new Error(`Unknown provider: ${provider}`);
-  }
-}
-```
-
-### Streaming via Broadcast (not DB writes)
-```typescript
-// Server: stream tokens via Broadcast, single INSERT on completion
+// Server side example logic for streaming update:
 for await (const chunk of result.textStream) {
   fullContent += chunk;
-  await broadcastChannel.send({
-    type: 'broadcast', event: 'token',
-    payload: { agentId, content: fullContent, done: false },
-  });
+  tokenCount++;
+  if (tokenCount % 8 === 0) {
+    await supabase.from('messages').update({ content: fullContent }).eq('id', messageId);
+  }
 }
-await supabase.from('messages').insert({ channel_id, sender_type: 'agent', sender_id: agentId, content: fullContent });
-await broadcastChannel.send({ type: 'broadcast', event: 'token', payload: { agentId, content: fullContent, done: true } });
+await supabase.from('messages').update({ content: fullContent, is_streaming: false }).eq('id', messageId);
 ```
 
-### Demo User (no auth)
+### OpenRouter + Vercel AI SDK
+```typescript
+// lib/openrouter.ts
+import { createOpenAI } from "@ai-sdk/openai";
+
+export function getModel(modelId: string) {
+  const provider = createOpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: process.env.OPENROUTER_API_KEY!,
+    headers: {
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL,
+      "X-Title": "Hivemind",
+    },
+  });
+  return provider(modelId);
+}
+```
+
+### Auth Middleware
+```typescript
+// middleware.ts 
+// Protects all routes except /login and /api/webhook
+// Uses @supabase/ssr createServerClient with cookie passthrough
+// Redirects unauthenticated users to /login
+// Service role key used server-side for agent writes (bypasses RLS intentionally)
+```
+
+### Demo User (no auth placeholder)
 ```typescript
 // lib/demo-user.ts
 export const DEMO_USER = {
@@ -515,7 +554,32 @@ export const DEMO_USER = {
 
 ---
 
-## Env Vars
+## Priority Stack 
+
+**MUST**
+- Channel UI with message sending
+- At least 2 thinking agents streaming responses
+- Supabase Realtime — open 2 tabs, both see the stream
+- Model badges showing different LLMs per agent
+
+**SHOULD**
+- Context extraction panel (decisions / actions / assumptions)
+- Agent Management Layer — config editor + run history
+- `@researcher` with Tavily web search
+- Execution agent card with progress bar
+
+**NICE**
+- E2B code execution + GitHub PR creation
+- Semantic search + message embeddings
+- Agent Builder (`@build` meta-agent)
+- Product launch analytics module
+- Market research + ad performance bonus features
+
+*Minimum viable demo: a channel where you @brainstorm and @critic, both stream visible to the team, with model badges showing they use different LLMs. That alone proves the core thesis — AI as a team participant, not a sidebar tool.*
+
+---
+
+## Environment Variables
 
 ```env
 # Supabase
@@ -523,22 +587,19 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 
-# AI Providers (each SDK reads its own key automatically)
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-GOOGLE_GENERATIVE_AI_API_KEY=
+# OpenRouter (all LLM calls route through here)
+OPENROUTER_API_KEY=
 
-# Agent Tools (Phase 7)
-TAVILY_API_KEY=
+# Agent Tools (Phase 4/6)
+TAVILY_API_KEY=          # @researcher web search
+E2B_API_KEY=             # Dev agent code sandbox
+GITHUB_TOKEN=            # Dev agent PR creation
+
+# Bonus Feature Keys (add when building those modules)
+META_ADS_ACCESS_TOKEN=
+GOOGLE_ADS_DEVELOPER_TOKEN=
+CRUNCHBASE_API_KEY=
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
-
----
-
-## Priority
-
-**MUST:** Steps 1-5 (scaffold, UI, database, real-time chat, thinking agents)
-**SHOULD:** Steps 6-7 (context layer, web search)
-**LATER:** Steps 8-9 (auth, polish)
