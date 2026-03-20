@@ -1,0 +1,33 @@
+import { Hash, Bell, Smile, SlidersHorizontal } from "lucide-react";
+
+interface ChannelHeaderProps {
+  channelName: string;
+  memberCount?: number;
+}
+
+export function ChannelHeader({ channelName }: ChannelHeaderProps) {
+  return (
+    <div className="flex h-[49px] items-center justify-between border-b border-[#E0E0E0] bg-white px-4">
+      <div className="flex items-center gap-1">
+        <Hash className="h-4 w-4 text-[#616061]" />
+        <h2 className="text-[16px] font-bold text-[#1D1C1D]">
+          {channelName}
+        </h2>
+      </div>
+      <div className="flex items-center gap-3">
+        <button className="relative text-[#616061] hover:text-[#1D1C1D]">
+          <Bell className="h-4 w-4" />
+          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+            2
+          </span>
+        </button>
+        <button className="text-[#616061] hover:text-[#1D1C1D]">
+          <Smile className="h-4 w-4" />
+        </button>
+        <button className="text-[#616061] hover:text-[#1D1C1D]">
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}

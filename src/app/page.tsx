@@ -1,65 +1,87 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { IconRail } from "@/components/layout/icon-rail";
+import { ChannelSidebar } from "@/components/layout/channel-sidebar";
+import { ChannelHeader } from "@/components/layout/channel-header";
+import { MessageList } from "@/components/chat/message-list";
+import { MessageInput } from "@/components/chat/message-input";
+
+const MOCK_CHANNELS = [
+  { id: "1", name: "general", unread: 1 },
+  { id: "2", name: "core-app", unread: 0 },
+  { id: "3", name: "hiring", unread: 0 },
+  { id: "4", name: "random", unread: 0 },
+];
+
+const MOCK_DM_USERS = [
+  { id: "d1", name: "Blake Anderson", avatarColor: "#7F77DD", you: true },
+  { id: "d2", name: "Benjamin Chen", avatarColor: "#1D9E75" },
+  { id: "d3", name: "Jay 10x", avatarColor: "#E8593C" },
+  { id: "d4", name: "Ben Wang", avatarColor: "#378ADD" },
+];
+
+const MOCK_MESSAGES = [
+  {
+    id: "m1",
+    senderName: "Benjamin Chen",
+    senderType: "user" as const,
+    avatar: null,
+    avatarColor: "#1D9E75",
+    content:
+      "Hey team, just pushed the latest updates to the main branch. Can everyone pull and test?",
+    timestamp: "10:32 AM",
+  },
+  {
+    id: "m2",
+    senderName: "Jay 10x",
+    senderType: "user" as const,
+    avatar: null,
+    avatarColor: "#E8593C",
+    content:
+      "On it! I'll run the test suite now and report back.",
+    timestamp: "10:33 AM",
+  },
+  {
+    id: "m3",
+    senderName: "Blake Anderson",
+    senderType: "user" as const,
+    avatar: null,
+    avatarColor: "#7F77DD",
+    content:
+      "Looks great so far. I noticed the sidebar layout needs some tweaks — the spacing between sections is a bit tight. I'll open a PR for that.",
+    timestamp: "10:34 AM",
+  },
+  {
+    id: "m4",
+    senderName: "Ben Wang",
+    senderType: "user" as const,
+    avatar: null,
+    avatarColor: "#378ADD",
+    content:
+      "Agreed, the header icons could use some cleanup too. Let's sync on the design after lunch.",
+    timestamp: "10:35 AM",
+  },
+];
 
 export default function Home() {
+  const [activeChannel, setActiveChannel] = useState("1");
+  const currentChannel = MOCK_CHANNELS.find((c) => c.id === activeChannel)!;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="flex h-full">
+      <IconRail />
+      <ChannelSidebar
+        channels={MOCK_CHANNELS}
+        activeChannelId={activeChannel}
+        onChannelSelect={setActiveChannel}
+        dmUsers={MOCK_DM_USERS}
+      />
+      <div className="flex flex-1 flex-col min-w-0">
+        <ChannelHeader channelName={currentChannel.name} />
+        <MessageList messages={MOCK_MESSAGES} />
+        <MessageInput channelName={currentChannel.name} />
+      </div>
     </div>
   );
 }
