@@ -19,6 +19,7 @@ interface ChannelSidebarProps {
   channels: Channel[];
   activeChannelId: string;
   onChannelSelect: (id: string) => void;
+  onCreateChannel?: () => void;
   dmUsers?: DMUser[];
 }
 
@@ -26,6 +27,7 @@ export function ChannelSidebar({
   channels,
   activeChannelId,
   onChannelSelect,
+  onCreateChannel,
   dmUsers = [],
 }: ChannelSidebarProps) {
   return (
@@ -36,7 +38,10 @@ export function ChannelSidebar({
           <h1 className="text-[15px] font-bold text-[#1D1C1D]">Messages</h1>
           <ChevronDown className="h-3.5 w-3.5 text-[#1D1C1D]" />
         </button>
-        <button className="flex h-7 w-7 items-center justify-center rounded-md text-[#616061] hover:bg-[#E0E0E0]/50 hover:text-[#1D1C1D]">
+        <button
+          onClick={onCreateChannel}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-[#616061] hover:bg-[#E0E0E0]/50 hover:text-[#1D1C1D]"
+        >
           <Plus className="h-4 w-4" />
         </button>
       </div>

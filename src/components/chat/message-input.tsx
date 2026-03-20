@@ -5,10 +5,11 @@ import { ArrowUp, Smile, Paperclip, AtSign, Type } from "lucide-react";
 
 interface MessageInputProps {
   channelName: string;
+  onSend: (content: string) => void;
   agents?: { handle: string; emoji: string; color: string }[];
 }
 
-export function MessageInput({ channelName }: MessageInputProps) {
+export function MessageInput({ channelName, onSend }: MessageInputProps) {
   const [message, setMessage] = useState("");
 
   const hasContent = message.trim().length > 0;
@@ -27,6 +28,7 @@ export function MessageInput({ channelName }: MessageInputProps) {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               if (hasContent) {
+                onSend(message);
                 setMessage("");
               }
             }
@@ -57,6 +59,12 @@ export function MessageInput({ channelName }: MessageInputProps) {
                 : "bg-[#E0E0E0] text-white"
             }`}
             disabled={!hasContent}
+            onClick={() => {
+              if (hasContent) {
+                onSend(message);
+                setMessage("");
+              }
+            }}
           >
             <ArrowUp className="h-4 w-4" />
           </button>

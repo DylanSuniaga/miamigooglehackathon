@@ -1,3 +1,5 @@
+import { Trash2 } from "lucide-react";
+
 interface MessageBubbleProps {
   senderName: string;
   senderType: "user" | "agent" | "system";
@@ -7,6 +9,7 @@ interface MessageBubbleProps {
   model?: string;
   content: string;
   timestamp: string;
+  onDelete?: () => void;
 }
 
 export function MessageBubble({
@@ -16,11 +19,12 @@ export function MessageBubble({
   avatarColor,
   content,
   timestamp,
+  onDelete,
 }: MessageBubbleProps) {
   const isAgent = senderType === "agent";
 
   return (
-    <div className="group flex gap-3 px-5 py-3 hover:bg-[#F8F8F8]">
+    <div className="group relative flex gap-3 px-5 py-3 hover:bg-[#F8F8F8]">
       {/* Avatar */}
       <div className="flex-shrink-0 pt-0.5">
         {isAgent ? (
@@ -49,6 +53,19 @@ export function MessageBubble({
           {renderContent(content)}
         </div>
       </div>
+
+      {/* Hover actions */}
+      {onDelete && (
+        <div className="absolute right-4 top-2 hidden group-hover:flex items-center gap-0.5 rounded-md border border-[#E0E0E0] bg-white shadow-sm">
+          <button
+            onClick={onDelete}
+            className="flex h-7 w-7 items-center justify-center rounded-md text-[#616061] hover:bg-[#FDE8E8] hover:text-red-600"
+            title="Delete message"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
