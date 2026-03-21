@@ -6,6 +6,7 @@ interface StreamingMessageProps {
   agentColor: string;
   model: string;
   content: string;
+  status?: string;
 }
 
 function TypingDots({ color }: { color: string }) {
@@ -32,6 +33,7 @@ export function StreamingMessage({
   agentColor,
   model,
   content,
+  status,
 }: StreamingMessageProps) {
   const modelShort = model.includes(":") ? model.split(":")[1] : model;
   const hasContent = content.trim().length > 0;
@@ -60,7 +62,7 @@ export function StreamingMessage({
             </span>
           )}
           <span className="text-[12px] text-[#ABABAD]">
-            {hasContent ? "typing..." : "thinking..."}
+            {hasContent ? "typing..." : status === "searching" ? "searching the web..." : "thinking..."}
           </span>
         </div>
         <div className="mt-0.5 text-[15px] leading-[1.5] text-[#1D1C1D]">

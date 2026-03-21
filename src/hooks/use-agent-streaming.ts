@@ -11,6 +11,7 @@ export interface StreamingMessage {
   agentColor: string;
   model: string;
   content: string;
+  status?: string;
 }
 
 export function useAgentStreaming(channelId: string | null) {
@@ -36,6 +37,7 @@ export function useAgentStreaming(channelId: string | null) {
           agentColor?: string;
           model?: string;
           content: string;
+          status?: string;
           done: boolean;
         };
 
@@ -50,7 +52,7 @@ export function useAgentStreaming(channelId: string | null) {
             if (existing) {
               return prev.map((m) =>
                 m.agentId === data.agentId
-                  ? { ...m, content: data.content }
+                  ? { ...m, content: data.content, status: data.status }
                   : m
               );
             }
@@ -64,6 +66,7 @@ export function useAgentStreaming(channelId: string | null) {
                 agentColor: data.agentColor ?? "#7F77DD",
                 model: data.model ?? "",
                 content: data.content,
+                status: data.status,
               },
             ];
           });

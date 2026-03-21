@@ -73,6 +73,7 @@ export function MessageList({
             agentColor={sm.agentColor}
             model={sm.model}
             content={sm.content}
+            status={sm.status}
           />
         ))}
         <div ref={bottomRef} />
