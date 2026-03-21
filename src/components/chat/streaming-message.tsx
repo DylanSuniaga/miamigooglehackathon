@@ -1,131 +1,86 @@
-import { Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
-interface AgentInfo {
-  handle: string;
-  emoji: string;
-  color: string;
-}
-
-interface MessageBubbleProps {
-  senderName: string;
-  senderType: "user" | "agent" | "system";
-  avatar: string | null;
-  avatarColor?: string;
-  color?: string;
-  model?: string;
+interface StreamingMessageProps {
+  agentName: string;
+  agentEmoji: string;
+  agentColor: string;
+  model: string;
   content: string;
-  timestamp: string;
-  agents?: AgentInfo[];
-  onDelete?: () => void;
 }
 
-export function MessageBubble({
-  senderName,
-  senderType,
-  avatar,
-  avatarColor,
-  color,
+function TypingDots({ color }: { color: string }) {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="inline-block h-2 w-2 rounded-full animate-bounce"
+          style={{
+            backgroundColor: color,
+            animationDelay: `${i * 150}ms`,
+            animationDuration: "600ms",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function StreamingMessage({
+  agentName,
+  agentEmoji,
+  agentColor,
   model,
   content,
-  timestamp,
-  agents = [],
-  onDelete,
-}: MessageBubbleProps) {
-  const isAgent = senderType === "agent";
-  const modelShort = model?.includes(":") ? model.split(":")[1] : model;
+}: StreamingMessageProps) {
+  const modelShort = model.includes(":") ? model.split(":")[1] : model;
+  const hasContent = content.trim().length > 0;
 
   return (
     <div
-      className="group relative flex gap-3 px-5 py-3 hover:bg-[#F8F8F8]"
-      style={isAgent && color ? { borderLeft: `3px solid ${color}` } : undefined}
+      className="group relative flex gap-3 px-5 py-3"
+      style={{ borderLeft: `3px solid ${agentColor}` }}
     >
       {/* Avatar */}
       <div className="flex-shrink-0 pt-0.5">
-        {isAgent ? (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0F0F0] text-lg">
-            {avatar}
-          </div>
-        ) : (
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-full text-white text-sm font-bold"
-            style={{ backgroundColor: avatarColor || "#1264A3" }}
-          >
-            {senderName.charAt(0).toUpperCase()}
-          </div>
-        )}
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0F0F0] text-lg">
+          {agentEmoji}
+        </div>
       </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
           <span className="text-[15px] font-bold text-[#1D1C1D]">
-            {senderName}
+            {agentName}
           </span>
-          <span className="text-[12px] text-[#ABABAD]">{timestamp}</span>
-          {isAgent && modelShort && (
+          {modelShort && (
             <span className="rounded bg-[#F0F0F0] px-1.5 py-0.5 text-[10px] font-mono text-[#616061]">
               {modelShort}
             </span>
           )}
+          <span className="text-[12px] text-[#ABABAD]">
+            {hasContent ? "typing..." : "thinking..."}
+          </span>
         </div>
         <div className="mt-0.5 text-[15px] leading-[1.5] text-[#1D1C1D]">
-          {isAgent ? (
+          {hasContent ? (
             <div className="prose-sm max-w-none">
               <ReactMarkdown components={markdownComponents}>
                 {content}
               </ReactMarkdown>
+              <span
+                className="inline-block w-[2px] h-[1em] align-text-bottom ml-0.5 animate-pulse"
+                style={{ backgroundColor: agentColor }}
+              />
             </div>
           ) : (
-            <span className="whitespace-pre-wrap">
-              {renderUserContent(content, agents)}
-            </span>
+            <TypingDots color={agentColor} />
           )}
         </div>
       </div>
-
-      {/* Hover actions */}
-      {onDelete && (
-        <div className="absolute right-4 top-2 hidden group-hover:flex items-center gap-0.5 rounded-md border border-[#E0E0E0] bg-white shadow-sm">
-          <button
-            onClick={onDelete}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[#616061] hover:bg-[#FDE8E8] hover:text-red-600"
-            title="Delete message"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
     </div>
   );
-}
-
-function renderUserContent(content: string, agents: AgentInfo[]) {
-  const agentMap = new Map(agents.map((a) => [a.handle.toLowerCase(), a]));
-
-  const parts = content.split(/(@\w+)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("@")) {
-      const handle = part.slice(1).toLowerCase();
-      const agent = agentMap.get(handle);
-      if (agent) {
-        return (
-          <span
-            key={i}
-            className="inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[13px] font-semibold align-baseline"
-            style={{
-              backgroundColor: `${agent.color}18`,
-              color: agent.color,
-            }}
-          >
-            <span className="text-[12px]">{agent.emoji}</span>
-            {part}
-          </span>
-        );
-      }
-    }
-    return part;
-  });
 }
 
 const markdownComponents = {

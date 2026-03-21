@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { IconRail } from "@/components/layout/icon-rail";
 import { ChannelSidebar } from "@/components/layout/channel-sidebar";
 import { ChannelHeader } from "@/components/layout/channel-header";
@@ -9,6 +9,7 @@ import { MessageInput } from "@/components/chat/message-input";
 import { CreateChannelDialog } from "@/components/channel/create-channel-dialog";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useChannelMessages } from "@/hooks/use-channel-messages";
+import { useAgentStreaming, type StreamingMessage as StreamingMessageType } from "@/hooks/use-agent-streaming";
 
 const MOCK_DM_USERS = [
   { id: "d1", name: "Blake Anderson", avatarColor: "#7F77DD", you: true },
@@ -18,9 +19,10 @@ const MOCK_DM_USERS = [
 ];
 
 export default function Home() {
-  const { channels, loading: workspaceLoading, createChannel } = useWorkspace();
+  const { channels, agents, loading: workspaceLoading, createChannel } = useWorkspace();
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [pendingAgents, setPendingAgents] = useState<StreamingMessageType[]>([]);
 
   // Set default channel once loaded
   useEffect(() => {
@@ -33,6 +35,23 @@ export default function Home() {
   const { messages, sendMessage, deleteMessage } =
     useChannelMessages(activeChannelId);
 
+  const { streamingMessages } = useAgentStreaming(activeChannelId);
+
+  // Remove pending agents once real streaming starts
+  useEffect(() => {
+    if (streamingMessages.length > 0) {
+      const streamingIds = new Set(streamingMessages.map((m) => m.agentId));
+      setPendingAgents((prev) => prev.filter((p) => !streamingIds.has(p.agentId)));
+    }
+  }, [streamingMessages]);
+
+  // Merge pending + streaming for display
+  const allStreamingMessages = useMemo(() => {
+    const streamingIds = new Set(streamingMessages.map((m) => m.agentId));
+    const activePending = pendingAgents.filter((p) => !streamingIds.has(p.agentId));
+    return [...activePending, ...streamingMessages];
+  }, [pendingAgents, streamingMessages]);
+
   const sidebarChannels = channels.map((c) => ({
     id: c.id,
     name: c.name,
@@ -40,6 +59,53 @@ export default function Home() {
   }));
 
   const currentChannel = channels.find((c) => c.id === activeChannelId);
+
+  const agentPills = agents.map((a) => ({
+    handle: a.handle,
+    emoji: a.avatar_emoji,
+    color: a.color,
+  }));
+
+  const invokeAgent = useCallback(
+    async (agentHandle: string) => {
+      if (!activeChannelId) return;
+
+      // Find the agent info to show pending indicator immediately
+      const agent = agents.find((a) => a.handle === agentHandle);
+      if (agent) {
+        setPendingAgents((prev) => [
+          ...prev,
+          {
+            agentId: agent.id,
+            agentHandle: agent.handle,
+            agentName: agent.display_name,
+            agentEmoji: agent.avatar_emoji,
+            agentColor: agent.color,
+            model: agent.model,
+            content: "",
+          },
+        ]);
+      }
+
+      try {
+        await fetch("/api/agent/invoke", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            channelId: activeChannelId,
+            agentHandle,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to invoke agent:", err);
+        // Remove pending on error
+        if (agent) {
+          setPendingAgents((prev) => prev.filter((p) => p.agentId !== agent.id));
+        }
+      }
+    },
+    [activeChannelId, agents]
+  );
 
   async function handleCreateChannel(name: string, description: string) {
     const newChannel = await createChannel(name, description);
@@ -69,10 +135,17 @@ export default function Home() {
           channelName={currentChannel?.name ?? ""}
           channelDescription={currentChannel?.description}
         />
-        <MessageList messages={messages} onDeleteMessage={deleteMessage} />
+        <MessageList
+          messages={messages}
+          streamingMessages={allStreamingMessages}
+          agents={agentPills}
+          onDeleteMessage={deleteMessage}
+        />
         <MessageInput
           channelName={currentChannel?.name ?? ""}
           onSend={sendMessage}
+          agents={agentPills}
+          onInvokeAgent={invokeAgent}
         />
       </div>
 
