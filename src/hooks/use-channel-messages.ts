@@ -17,6 +17,7 @@ export interface DisplayMessage {
   content: string;
   timestamp: string;
   attachments?: Attachment[];
+  metadata?: Record<string, unknown>;
 }
 
 function formatTimestamp(iso: string): string {
@@ -42,6 +43,8 @@ export function useChannelMessages(channelId: string | null) {
   const resolveMessage = useCallback((msg: Message): DisplayMessage => {
     const attachments = (msg.metadata as Record<string, unknown>)?.attachments as Attachment[] | undefined;
 
+    const meta = msg.metadata as Record<string, unknown> | undefined;
+
     if (msg.sender_type === "agent") {
       const agent = agentsRef.current.get(msg.sender_id);
       return {
@@ -54,6 +57,7 @@ export function useChannelMessages(channelId: string | null) {
         content: msg.content,
         timestamp: formatTimestamp(msg.created_at),
         attachments,
+        metadata: meta,
       };
     }
 
@@ -67,6 +71,7 @@ export function useChannelMessages(channelId: string | null) {
       content: msg.content,
       timestamp: formatTimestamp(msg.created_at),
       attachments,
+      metadata: meta,
     };
   }, []);
 

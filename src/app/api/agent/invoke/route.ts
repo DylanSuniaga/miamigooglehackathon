@@ -8,6 +8,7 @@ import { embedMessage } from "@/lib/embeddings";
 import { webSearch } from "@/lib/agents/tools";
 import { generateImage } from "@/lib/agents/nanobanana";
 import { persistImageFromUrl } from "@/lib/supabase/storage";
+import { executeCode } from "@/lib/agents/e2b-sandbox";
 
 const WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -229,6 +230,173 @@ export async function POST(req: NextRequest) {
           agentId: agent.id,
           agentHandle: agent.handle,
           content: `⚠️ Error generating image: ${err instanceof Error ? err.message : "Unknown error"}`,
+          done: true,
+        },
+      });
+    } finally {
+      broadcastClient.removeChannel(broadcastChannel);
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  // ===== @coder: code generation + sandboxed execution =====
+  const isCoder = agent.handle === "coder";
+  if (isCoder) {
+    try {
+      // Stream the LLM response so the user sees code being written
+      let fullContent = "";
+      const result = streamText({
+        model: getModel(agent.model),
+        system: enhancedSystemPrompt,
+        messages: conversationMessages,
+        temperature: agent.temperature,
+      });
+
+      for await (const chunk of result.textStream) {
+        fullContent += chunk;
+        await broadcastChannel.send({
+          type: "broadcast",
+          event: "token",
+          payload: {
+            agentId: agent.id,
+            agentHandle: agent.handle,
+            agentName: agent.display_name,
+            agentEmoji: agent.avatar_emoji,
+            agentColor: agent.color,
+            model: agent.model,
+            content: fullContent,
+            done: false,
+          },
+        });
+      }
+
+      // Extract code block from response
+      const codeMatch = fullContent.match(/```(\w+)?\n([\s\S]*?)```/);
+      let executionResult = null;
+
+      // Detect if the code is HTML — skip sandbox execution, store for preview
+      let isHtml = false;
+
+      if (codeMatch) {
+        const language = (codeMatch[1] || "python") as "python" | "javascript" | "r" | "bash" | "html";
+        const code = codeMatch[2].trim();
+        isHtml = language === "html" || (code.includes("<!DOCTYPE") || code.includes("<html"));
+
+        if (isHtml) {
+          // No execution needed — store raw HTML for iframe preview
+          fullContent += "\n\n---\n**Live preview available** — click \"View Live Preview\" below.";
+        } else {
+          // Broadcast executing status
+          await broadcastChannel.send({
+            type: "broadcast",
+            event: "token",
+            payload: {
+              agentId: agent.id,
+              agentHandle: agent.handle,
+              agentName: agent.display_name,
+              agentEmoji: agent.avatar_emoji,
+              agentColor: agent.color,
+              model: agent.model,
+              content: fullContent,
+              status: "executing_code",
+              done: false,
+            },
+          });
+
+          // Execute in sandbox
+          executionResult = await executeCode(code, language as "python" | "javascript" | "r" | "bash");
+
+          // Append execution output to message
+          fullContent += "\n\n---\n**Execution Output**";
+          if (executionResult.stdout) {
+            fullContent += `\n\`\`\`\n${executionResult.stdout}\n\`\`\``;
+          }
+          if (executionResult.stderr) {
+            fullContent += `\n\n**Stderr**\n\`\`\`\n${executionResult.stderr}\n\`\`\``;
+          }
+          if (executionResult.error) {
+            fullContent += `\n\n**Error**\n\`\`\`\n${executionResult.error}\n\`\`\``;
+          }
+          if (!executionResult.stdout && !executionResult.stderr && !executionResult.error) {
+            fullContent += "\n\n_No output produced._";
+          }
+          fullContent += `\n\n_Executed in ${executionResult.executionTimeMs}ms_`;
+        }
+      }
+
+      // Insert message
+      const { data: coderMsg } = await supabase.from("messages").insert({
+        channel_id: channelId,
+        sender_type: "agent",
+        sender_id: agent.id,
+        content: fullContent,
+        metadata: {
+          model: agent.model,
+          ...(isHtml && codeMatch && {
+            execution: {
+              language: "html",
+              code: codeMatch[2].trim(),
+              html: codeMatch[2].trim(),
+            },
+          }),
+          ...(!isHtml && executionResult && {
+            execution: {
+              language: codeMatch?.[1] || "python",
+              code: codeMatch?.[2]?.trim(),
+              stdout: executionResult.stdout,
+              stderr: executionResult.stderr,
+              error: executionResult.error,
+              executionTimeMs: executionResult.executionTimeMs,
+            },
+          }),
+        },
+      }).select("id").single();
+
+      // Fire-and-forget embedding
+      if (coderMsg?.id) {
+        embedMessage(coderMsg.id, fullContent).catch(() => {});
+      }
+
+      // Update agent run
+      if (agentRun?.id) {
+        const durationMs = Date.now() - new Date(runStartedAt).getTime();
+        await supabase.from("agent_runs").update({
+          status: "completed",
+          output_summary: fullContent.slice(0, 500),
+          duration_ms: durationMs,
+          completed_at: new Date().toISOString(),
+        }).eq("id", agentRun.id);
+      }
+
+      // Broadcast done
+      await broadcastChannel.send({
+        type: "broadcast",
+        event: "token",
+        payload: {
+          agentId: agent.id,
+          agentHandle: agent.handle,
+          content: fullContent,
+          done: true,
+        },
+      });
+    } catch (err) {
+      console.error("@coder error:", err);
+      if (agentRun?.id) {
+        const durationMs = Date.now() - new Date(runStartedAt).getTime();
+        await supabase.from("agent_runs").update({
+          status: "failed",
+          error: err instanceof Error ? err.message : "Unknown error",
+          duration_ms: durationMs,
+          completed_at: new Date().toISOString(),
+        }).eq("id", agentRun.id);
+      }
+      await broadcastChannel.send({
+        type: "broadcast",
+        event: "token",
+        payload: {
+          agentId: agent.id,
+          agentHandle: agent.handle,
+          content: `⚠️ Error: ${err instanceof Error ? err.message : "Unknown error"}`,
           done: true,
         },
       });
