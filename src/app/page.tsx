@@ -8,6 +8,7 @@ import { MessageList } from "@/components/chat/message-list";
 import { MessageInput } from "@/components/chat/message-input";
 import { CreateChannelDialog } from "@/components/channel/create-channel-dialog";
 import { AgentManagerLayout } from "@/components/agent-manager/agent-manager-layout";
+import { ContextPanel } from "@/components/context-panel/context-panel";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useChannelMessages } from "@/hooks/use-channel-messages";
 import { useAgentStreaming, type StreamingMessage as StreamingMessageType } from "@/hooks/use-agent-streaming";
@@ -25,6 +26,7 @@ export default function Home() {
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [pendingAgents, setPendingAgents] = useState<StreamingMessageType[]>([]);
   const [activeView, setActiveView] = useState<AppView>("messages");
+  const [contextPanelOpen, setContextPanelOpen] = useState(false);
 
   // Set default channel once loaded
   useEffect(() => {
@@ -90,14 +92,31 @@ export default function Home() {
       }
 
       try {
-        await fetch("/api/agent/invoke", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            channelId: activeChannelId,
-            agentHandle,
+        // When @context is invoked, fire both the chat response AND extraction in parallel
+        const promises: Promise<unknown>[] = [
+          fetch("/api/agent/invoke", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              channelId: activeChannelId,
+              agentHandle,
+            }),
           }),
-        });
+        ];
+
+        if (agentHandle === "context") {
+          promises.push(
+            fetch("/api/context/extract", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ channelId: activeChannelId }),
+            })
+          );
+          // Auto-open the context panel
+          setContextPanelOpen(true);
+        }
+
+        await Promise.all(promises);
       } catch (err) {
         console.error("Failed to invoke agent:", err);
         // Remove pending on error
@@ -139,6 +158,8 @@ export default function Home() {
             <ChannelHeader
               channelName={currentChannel?.name ?? ""}
               channelDescription={currentChannel?.description}
+              contextPanelOpen={contextPanelOpen}
+              onToggleContextPanel={() => setContextPanelOpen((prev) => !prev)}
             />
             <MessageList
               messages={messages}
@@ -153,6 +174,14 @@ export default function Home() {
               onInvokeAgent={invokeAgent}
             />
           </div>
+
+          {contextPanelOpen && activeChannelId && (
+            <ContextPanel
+              channelId={activeChannelId}
+              onClose={() => setContextPanelOpen(false)}
+            />
+          )}
+
           <CreateChannelDialog
             open={showCreateChannel}
             onClose={() => setShowCreateChannel(false)}

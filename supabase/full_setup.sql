@@ -107,13 +107,19 @@ create index idx_messages_channel_time on messages(channel_id, created_at);
 create index idx_messages_embedding on messages using hnsw (embedding vector_cosine_ops);
 create index idx_channel_members_channel on channel_members(channel_id);
 
--- REALTIME (messages + channels)
+-- REALTIME (messages + channels + context tables)
 alter publication supabase_realtime add table messages;
 alter publication supabase_realtime add table channels;
+alter publication supabase_realtime add table context_decisions;
+alter publication supabase_realtime add table context_actions;
+alter publication supabase_realtime add table context_assumptions;
 
 -- Full replica identity so DELETE payloads include row data
 alter table messages replica identity full;
 alter table channels replica identity full;
+alter table context_decisions replica identity full;
+alter table context_actions replica identity full;
+alter table context_assumptions replica identity full;
 
 -- Permissive RLS (no auth for now — demo mode)
 alter table workspaces enable row level security;
