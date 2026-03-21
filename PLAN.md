@@ -614,3 +614,44 @@ CRUNCHBASE_API_KEY=
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+---
+
+## Phase 6 Extensions
+
+### 1. Launch Button Text
+Renamed to **"Launch Agent"** in `src/components/layout/channel-header.tsx`.
+
+### 2. In-Chat Code Execution Sandbox
+- Agents embed `<<<SANDBOX:{"language":"python","code":"...","title":"..."}>>>` in their response.
+- Client detects the block and renders `SandboxOutputCard` in the message (visible to all channel members).
+- Runs via **Pyodide** (Python WebAssembly in-browser, no server key required).
+- Supported outputs: matplotlib charts → PNG, pandas DataFrames → styled table, print() → text, JS, HTML iframes.
+- SQL: `supabase/migrations/00005_sandbox_runs.sql`
+
+### 3. Complex Agents with Tool Orchestration
+- Runner: `src/lib/agents/complex-agent-runner.ts`
+- Built-in tools: `run_code`, `read_docs`, `query_channel`, `web_search` (requires `TAVILY_API_KEY`)
+- **Context7 MCP** (optional) — real-time library documentation lookup:
+  - Set `CONTEXT7_MCP_API_TOKEN` in `.env`
+  - Endpoint: `https://mcp.context7.com/mcp`
+  - Get token at: https://context7.com
+- Enable tools per-agent via `agents.tools` JSONB in Agent Manager.
+
+### 4. LaTeX Rendering in Chat
+- `$...$` → KaTeX InlineMath, `$$...$$` → KaTeX BlockMath
+- Rendered via `react-katex` in `message-bubble.tsx`
+- Graceful fallback on parse failure.
+
+### 5. Universal Agent Instructions
+- Panel: **Agent Manager → Instructions tab** (globe icon)
+- Content is prepended to every qualifying agent's system prompt at inference time
+- SQL: `supabase/migrations/00004_workspace_instructions.sql`
+- API: `GET / PATCH /api/workspace/instructions`
+- Applied in both `/api/agent/invoke` and `/api/agent/launch`
+
+### New Env Vars
+```env
+TAVILY_API_KEY=          # optional — web_search tool in complex agents
+CONTEXT7_MCP_API_TOKEN=  # optional — real-time library docs via Context7 MCP
+```

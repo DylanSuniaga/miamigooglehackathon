@@ -3,8 +3,25 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getModel } from "@/lib/ai";
 import { streamText } from "ai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { extractDelegationBlocks, stripDelegationBlocks } from "@/lib/agents/delegation-parser";
 
 const WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
+
+const getSandboxPrompt = (isServer: boolean) => `
+## Code Execution
+When your task requires producing a visualization, chart, graph, animation, data output, or any executable result:
+1. WRITE the actual runnable code — do NOT describe it only in prose.
+2. Wrap it: <<<SANDBOX:{"language":"python","code":"<full code>","title":"<title>"${isServer ? ',"mode":"server"' : ''}}>>>
+3. ${isServer ? "You are running in a persistent Ubuntu server sandbox with 'pip install' and full filesystem access." : "Python + matplotlib preferred. For interactive web content use HTML/JS."}
+4. For multi-step tasks produce multiple <<<SANDBOX:{}>>> blocks.
+`;
+
+const DELEGATION_SYSTEM_PROMPT = `
+## Agent Delegation  
+To delegate a subtask to another agent:
+<<<DELEGATE:{"to":"<handle>","task":"<clear task>"}>>>
+The system spawns that agent and streams their response to the channel.
+`;
 
 export async function POST(req: NextRequest) {
   const { channelId, agentId, taskDescription, contextScope } = await req.json();
@@ -152,9 +169,45 @@ TASK: ${taskDescription}
 
 Execute this task thoroughly. Provide actionable, structured output.`;
 
-    const result = streamText({
+  // Load universal workspace instructions & build effective system prompt
+  const { data: wsInstructions } = await supabase
+    .from("workspace_instructions")
+    .select("content, excluded_agent_ids")
+    .eq("workspace_id", WORKSPACE_ID)
+    .maybeSingle();
+
+  // Load agent directory for inter-agent awareness
+  const { data: allAgentsForDir } = await supabase
+    .from("agents")
+    .select("handle, display_name, description")
+    .eq("workspace_id", WORKSPACE_ID)
+    .eq("is_active", true);
+
+  const agentDirectory = (allAgentsForDir ?? [])
+    .filter((a: { handle: string }) => a.handle !== agent.handle)
+    .map((a: { handle: string; display_name: string; description: string }) =>
+      `@${a.handle} (${a.display_name})${a.description ? ": " + a.description : ""}`
+    )
+    .join("\n");
+
+  const enabledTools = (agent.tools as string[]) ?? [];
+  const promptParts: string[] = [];
+
+  if (wsInstructions?.content && !(wsInstructions.excluded_agent_ids ?? []).includes(agent.id)) {
+    promptParts.push(`[Universal Instructions]\n${wsInstructions.content}`);
+  }
+  promptParts.push(`[Your Instructions]\n${agent.system_prompt}`);
+  if (agentDirectory) promptParts.push(`[Available Agents]\n${agentDirectory}`);
+  if (enabledTools.includes("run_code") || enabledTools.includes("e2b_sandbox")) {
+    promptParts.push(getSandboxPrompt(enabledTools.includes("e2b_sandbox")).trim());
+  }
+  if (enabledTools.includes("delegate")) promptParts.push(DELEGATION_SYSTEM_PROMPT.trim());
+
+  const effectiveSystemPrompt = promptParts.join("\n\n---\n\n");
+
+  const result = streamText({
       model: getModel(agent.model),
-      system: agent.system_prompt,
+      system: effectiveSystemPrompt,
       messages: [{ role: "user", content: executionPrompt }],
       temperature: agent.temperature,
     });

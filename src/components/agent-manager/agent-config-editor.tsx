@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Agent } from "@/lib/types";
 import { Save, RotateCcw } from "lucide-react";
+import { ToolsPanel } from "./tools-panel";
 
 const AVAILABLE_MODELS = [
   { value: "google:gemini-2.5-flash", label: "Gemini 2.5 Flash" },
@@ -27,6 +28,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
   const [color, setColor] = useState(agent.color);
   const [isActive, setIsActive] = useState(agent.is_active);
   const [description, setDescription] = useState(agent.description ?? "");
+  const [tools, setTools] = useState<string[]>((agent.tools as string[]) ?? []);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -38,6 +40,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
     setColor(agent.color);
     setIsActive(agent.is_active);
     setDescription(agent.description ?? "");
+    setTools((agent.tools as string[]) ?? []);
     setSaved(false);
   }, [agent]);
 
@@ -47,7 +50,8 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
     temperature !== agent.temperature ||
     color !== agent.color ||
     isActive !== agent.is_active ||
-    description !== (agent.description ?? "");
+    description !== (agent.description ?? "") ||
+    JSON.stringify(tools.sort()) !== JSON.stringify(((agent.tools as string[]) ?? []).sort());
 
   async function handleSave() {
     setSaving(true);
@@ -59,6 +63,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
         color,
         is_active: isActive,
         description: description || null,
+        tools,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -74,6 +79,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
     setColor(agent.color);
     setIsActive(agent.is_active);
     setDescription(agent.description ?? "");
+    setTools((agent.tools as string[]) ?? []);
   }
 
   return (
@@ -241,29 +247,9 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
           </p>
         </div>
 
-        {/* Tools (read-only for now, placeholder) */}
+        {/* Tools */}
         <div>
-          <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
-            Tools
-          </label>
-          <div className="border border-[#E0E0E0] rounded-md p-3">
-            {agent.tools && (agent.tools as string[]).length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {(agent.tools as string[]).map((tool) => (
-                  <span
-                    key={tool}
-                    className="text-[12px] px-2 py-1 rounded-md bg-[#F0F0F0] text-[#616061] font-mono"
-                  >
-                    {tool}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[12px] text-[#ABABAD]">
-                No tools configured. Tools can be added in Phase 6 (Execution Agents).
-              </p>
-            )}
-          </div>
+          <ToolsPanel enabledTools={tools} onChange={setTools} />
         </div>
       </div>
     </div>

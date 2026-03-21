@@ -4,7 +4,6 @@ import {
   MessageSquare,
   Users,
   Bot,
-  FileText,
   Mail,
   Calendar,
   Settings,
@@ -21,7 +20,6 @@ const NAV_ITEMS = [
   { icon: MessageSquare, label: "Messages", view: "messages" as AppView },
   { icon: Bot, label: "Agents", view: "agents" as AppView },
   { icon: Users, label: "People" },
-  { icon: FileText, label: "Documents" },
   { icon: Mail, label: "Mail" },
   { icon: Calendar, label: "Calendar" },
 ];

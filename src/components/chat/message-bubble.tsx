@@ -1,5 +1,13 @@
+"use client";
+
+import React from "react";
 import { Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+import { hasSandboxBlock, stripSandboxBlocks } from "@/lib/sandbox/extract-sandbox-block";
+import { SandboxOutputCard } from "@/components/chat/sandbox-output-card";
 
 interface AgentInfo {
   handle: string;
@@ -34,6 +42,10 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const isAgent = senderType === "agent";
   const modelShort = model?.includes(":") ? model.split(":")[1] : model;
+
+  // Detect and strip sandbox blocks for separate rendering
+  const hasSandbox = isAgent && hasSandboxBlock(content);
+  const displayContent = hasSandbox ? stripSandboxBlocks(content) : content;
 
   return (
     <div
@@ -72,9 +84,17 @@ export function MessageBubble({
         <div className="mt-0.5 text-[15px] leading-[1.5] text-[#1D1C1D]">
           {isAgent ? (
             <div className="prose-sm max-w-none">
-              <ReactMarkdown components={markdownComponents}>
-                {content}
-              </ReactMarkdown>
+              {displayContent && (
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={markdownComponents}
+                >
+                  {displayContent}
+                </ReactMarkdown>
+              )}
+              {/* Sandbox output card — auto-runs code from <<<SANDBOX:{}>>> blocks */}
+              {hasSandbox && <SandboxOutputCard messageContent={content} autoRun={true} />}
             </div>
           ) : (
             <span className="whitespace-pre-wrap">

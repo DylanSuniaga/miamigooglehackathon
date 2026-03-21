@@ -42,7 +42,7 @@ export function ChannelHeader({
             title="Launch execution agent"
           >
             <Rocket className="h-3.5 w-3.5" />
-            Launch
+            Launch Agent
           </button>
         )}
         <button

@@ -8,10 +8,11 @@ import { ContextDocumentsPanel } from "./context-documents-panel";
 import { AgentRunHistory } from "./agent-run-history";
 import { CreateAgentDialog } from "./create-agent-dialog";
 import { AgentVisualMap } from "./agent-visual-map";
-import { Map, Settings2 } from "lucide-react";
+import { UniversalInstructionsPanel } from "./universal-instructions-panel";
+import { Map, Settings2, Globe } from "lucide-react";
 import type { Agent } from "@/lib/types";
 
-type EditorTab = "config" | "runs";
+type EditorTab = "config" | "runs" | "instructions";
 type ConfigViewMode = "form" | "map";
 
 export function AgentManagerLayout() {
@@ -110,6 +111,17 @@ export function AgentManagerLayout() {
                   </span>
                 )}
               </button>
+              <button
+                onClick={() => setActiveTab("instructions")}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
+                  activeTab === "instructions"
+                    ? "border-[#1264A3] text-[#1264A3]"
+                    : "border-transparent text-[#616061] hover:text-[#1D1C1D]"
+                }`}
+              >
+                <Globe className="h-3.5 w-3.5" />
+                Instructions
+              </button>
             </div>
 
             {/* View Mode Toggle (Only show in Config tab) */}
@@ -152,18 +164,19 @@ export function AgentManagerLayout() {
                 <AgentVisualMap 
                   agent={selectedAgent} 
                   contextDocs={contextDocs} 
-                  onNodeDoubleClick={(type) => {
-                    // Double clicking node drops back to form view
+                  onNodeDoubleClick={() => {
                     setConfigViewMode("form");
                   }}
                 />
               </div>
             )
-          ) : (
+          ) : activeTab === "runs" ? (
             <AgentRunHistory
               runs={runs}
               agentName={selectedAgent.display_name}
             />
+          ) : (
+            <UniversalInstructionsPanel agents={agents} />
           )}
         </div>
       ) : (
