@@ -3,43 +3,80 @@ export interface NanobananaResult {
   revisedPrompt?: string;
 }
 
+const API_BASE = "https://api.nanobananaapi.ai/api/v1/nanobanana";
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLL_ATTEMPTS = 60; // 2 minutes max
+
 export async function generateImage(
-  prompt: string,
-  model: string = "gemini-2.5-flash-preview-image-generation"
+  prompt: string
 ): Promise<NanobananaResult> {
   const apiKey = process.env.NANOBANANA_API_KEY;
   if (!apiKey) {
     throw new Error("NANOBANANA_API_KEY is not configured");
   }
 
-  const response = await fetch("https://api.nanobananaapi.ai/generate-image", {
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiKey}`,
+  };
+
+  // Step 1: Submit generation task
+  const submitRes = await fetch(`${API_BASE}/generate`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
+    headers,
     body: JSON.stringify({
       prompt,
-      model,
+      type: "TEXTTOIAMGE",
+      numImages: 1,
+      image_size: "1:1",
+      callBackUrl: "https://localhost/noop",
     }),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "Unknown error");
-    throw new Error(`Nanobanana API error (${response.status}): ${errorText}`);
+  if (!submitRes.ok) {
+    const errorText = await submitRes.text().catch(() => "Unknown error");
+    throw new Error(`Nanobanana submit error (${submitRes.status}): ${errorText}`);
   }
 
-  const data = await response.json();
-
-  // Extract image URL from response
-  // The API may return the URL in different fields depending on version
-  const imageUrl = data.image_url || data.imageUrl || data.url || data.data?.url;
-  if (!imageUrl) {
-    throw new Error("No image URL in Nanobanana response");
+  const submitData = await submitRes.json();
+  console.log("Nanobanana submit response:", JSON.stringify(submitData, null, 2));
+  const taskId = submitData.data?.taskId || submitData.taskId || submitData.data?.task_id;
+  if (!taskId) {
+    throw new Error(`No taskId in Nanobanana response: ${JSON.stringify(submitData)}`);
   }
 
-  return {
-    imageUrl,
-    revisedPrompt: data.revised_prompt || data.revisedPrompt,
-  };
+  // Step 2: Poll for completion
+  for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+    await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+
+    const pollRes = await fetch(
+      `${API_BASE}/record-info?taskId=${encodeURIComponent(taskId)}`,
+      { headers: { Authorization: `Bearer ${apiKey}` } }
+    );
+
+    if (!pollRes.ok) continue;
+
+    const pollData = await pollRes.json();
+    const task = pollData.data;
+
+    if (!task) continue;
+
+    // successFlag: 0=generating, 1=success, 2=creation failed, 3=generation failed
+    if (task.successFlag === 1) {
+      const imageUrl = task.response?.resultImageUrl || task.response?.originImageUrl;
+      if (!imageUrl) {
+        throw new Error("Task succeeded but no image URL in response");
+      }
+      return { imageUrl };
+    }
+
+    if (task.successFlag === 2 || task.successFlag === 3) {
+      throw new Error(
+        `Nanobanana generation failed: ${task.errorMessage || "Unknown error"}`
+      );
+    }
+    // successFlag === 0: still generating, keep polling
+  }
+
+  throw new Error("Nanobanana image generation timed out after 2 minutes");
 }
