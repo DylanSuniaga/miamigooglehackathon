@@ -3,7 +3,9 @@
 import { useEffect, useRef } from "react";
 import { MessageBubble } from "./message-bubble";
 import { StreamingMessage } from "./streaming-message";
+import { ExecutionAgentCard } from "./execution-agent-card";
 import type { StreamingMessage as StreamingMessageType } from "@/hooks/use-agent-streaming";
+import type { AgentRun } from "@/lib/types";
 
 interface Message {
   id: string;
@@ -23,10 +25,17 @@ interface AgentInfo {
   color: string;
 }
 
+interface AgentRunDisplay extends AgentRun {
+  agentName?: string;
+  agentEmoji?: string;
+  agentColor?: string;
+}
+
 interface MessageListProps {
   messages: Message[];
   streamingMessages?: StreamingMessageType[];
   agents?: AgentInfo[];
+  activeRuns?: AgentRunDisplay[];
   onDeleteMessage?: (messageId: string) => void;
 }
 
@@ -34,6 +43,7 @@ export function MessageList({
   messages,
   streamingMessages = [],
   agents = [],
+  activeRuns = [],
   onDeleteMessage,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -63,6 +73,15 @@ export function MessageList({
             onDelete={
               onDeleteMessage ? () => onDeleteMessage(message.id) : undefined
             }
+          />
+        ))}
+        {activeRuns.map((run) => (
+          <ExecutionAgentCard
+            key={run.id}
+            run={run}
+            agentName={run.agentName}
+            agentEmoji={run.agentEmoji}
+            agentColor={run.agentColor}
           />
         ))}
         {streamingMessages.map((sm) => (
