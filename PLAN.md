@@ -1,14 +1,14 @@
-# Hivemind — Implementation Plan
+# Gibert — Implementation Plan
 
 ## Vision & Positioning
 
-Hivemind is the workspace where product teams and AI agents think, decide, and build together. It bridges two worlds that have stayed stubbornly separate: the messy, human process of ideation and product decision-making, and the structured, executable world of AI agent systems.
+Gibert is the workspace where product teams and AI agents think, decide, and build together. It bridges two worlds that have stayed stubbornly separate: the messy, human process of ideation and product decision-making, and the structured, executable world of AI agent systems.
 
-Primary audience: Technical founders, AI engineers, and product managers at product-based businesses — the people who are both building AI agent systems and trying to ship products faster with them. Hivemind is built for both, simultaneously.
+Primary audience: Technical founders, AI engineers, and product managers at product-based businesses — the people who are both building AI agent systems and trying to ship products faster with them. Gibert is built for both, simultaneously.
 
 ## Context
 
-Building **Hivemind** for a hackathon: a channel-based AI workspace where teams collaborate with AI agents as first-class participants. Agents brainstorm, critique, architect, and research alongside humans. Auth is deferred — focus on getting agents and the platform working first.
+Building **Gibert** for a hackathon: a channel-based AI workspace where teams collaborate with AI agents as first-class participants. Agents brainstorm, critique, architect, and research alongside humans. Auth is deferred — focus on getting agents and the platform working first.
 
 **Repo:** https://github.com/DylanSuniaga/miamigooglehackathon.git
 
@@ -33,16 +33,16 @@ The fundamental loop:
 
 ### Core 2 — Agent Management Layer (Neat, Structured, Fast)
 
-The primary problem Hivemind solves for teams building with AI: context clutter. Every agent has its own context. Every tool has its own context. Documents get injected into main agent contexts. Subagents have their own tool lists. Tracking all of this across an agent architecture becomes unmanageable fast — slowing deployment and building speed.
+The primary problem Gibert solves for teams building with AI: context clutter. Every agent has its own context. Every tool has its own context. Documents get injected into main agent contexts. Subagents have their own tool lists. Tracking all of this across an agent architecture becomes unmanageable fast — slowing deployment and building speed.
 
-Hivemind provides a single, clean place to:
+Gibert provides a single, clean place to:
 - Define and configure agents — system prompts, models, temperature, tool access, all in one view
 - Manage context injection — see exactly what documents, decisions, and history each agent receives
 - Map subagent hierarchies — visualize how agents relate to each other and what flows between them
 - Monitor and update agents on the fly — change an agent's behavior mid-session without rebuilding
 - Track agent runs — see what each execution agent did, what it produced, and whether it succeeded
 
-The agent management layer is what separates Hivemind from "AI-native Slack." It makes the platform valuable to the engineer building the system, not just the PM using it.
+The agent management layer is what separates Gibert from "AI-native Slack." It makes the platform valuable to the engineer building the system, not just the PM using it.
 
 ---
 
@@ -121,7 +121,7 @@ Five default thinking agents ship with every workspace. Each uses a different fr
 ## Project Structure
 
 ```text
-hivemind/src/
+gibert/src/
 ├── app/
 │   ├── layout.tsx                    # ✅ Root layout with TooltipProvider
 │   ├── page.tsx                      # ✅ Main workspace view (real Supabase data)
@@ -164,7 +164,7 @@ Each phase produces a working, demoable state. Build in sequence.
 ### Phase 1: Foundation — Working Chat & Project Scaffold ✅ MOSTLY COMPLETE
 **Goal:** Next.js app running locally, UI shell, real DB with synced messages.
 
-- ✅ `npx create-next-app@canary hivemind` — Next.js 16 canary w/ TypeScript, Tailwind 4, App Router
+- ✅ `npx create-next-app@canary gibert` — Next.js 16 canary w/ TypeScript, Tailwind 4, App Router
 - ✅ Core deps installed: `@supabase/supabase-js`, `@supabase/ssr`, `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, `zod`, `react-markdown`, `date-fns`, `lucide-react`
 - ✅ shadcn/ui (base-nova style): avatar, badge, button, dialog, input, scroll-area, separator, tabs, textarea, tooltip
 - ✅ `.env.local`, `CLAUDE.md`, git + GitHub repo connected
@@ -258,7 +258,7 @@ Each phase produces a working, demoable state. Build in sequence.
 
 ## Bonus Power Features
 
-These four features make Hivemind a platform businesses pay for at scale. Build after the core is solid.
+These four features make Gibert a platform businesses pay for at scale. Build after the core is solid.
 
 ### Bonus 1 — Meta Agent: The Agent Builder
 A standardized AI agent available in any channel as `@build` that builds other agents (e.g., "we need an agent that monitors AWS costs"). Asks clarifying questions and generates the full spec (prompt, model, tools, memory structure, MCP integrations). Outputs agents directly into the Agent Management Layer using Claude Code-style loops with a Context7 MCP for frameworks lookup. Applies security best practices automatically.
@@ -437,7 +437,7 @@ $$;
 
 -- SEED DATA
 insert into workspaces (id, name) values
-  ('00000000-0000-0000-0000-000000000001', 'Hivemind HQ');
+  ('00000000-0000-0000-0000-000000000001', 'Gibert HQ');
 
 insert into channels (id, workspace_id, name, description, is_default) values
   ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'general', 'General discussion', true),
@@ -528,7 +528,7 @@ export function getModel(modelId: string) {
     apiKey: process.env.OPENROUTER_API_KEY!,
     headers: {
       "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL,
-      "X-Title": "Hivemind",
+      "X-Title": "Gibert",
     },
   });
   return provider(modelId);

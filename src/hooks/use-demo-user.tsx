@@ -19,7 +19,7 @@ export function DemoUserProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUserState] = useState<DemoUser>(DEMO_USERS[0]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("hivemind-user-id");
+    const stored = localStorage.getItem("gibert-user-id");
     if (stored) {
       const found = DEMO_USERS.find((u) => u.id === stored);
       if (found) setCurrentUserState(found);
@@ -28,7 +28,7 @@ export function DemoUserProvider({ children }: { children: ReactNode }) {
 
   function setCurrentUser(user: DemoUser) {
     setCurrentUserState(user);
-    localStorage.setItem("hivemind-user-id", user.id);
+    localStorage.setItem("gibert-user-id", user.id);
   }
 
   return (

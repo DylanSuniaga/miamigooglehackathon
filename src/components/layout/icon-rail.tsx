@@ -35,7 +35,7 @@ export function IconRail({ activeView = "messages", onViewChange }: IconRailProp
   return (
     <div className="flex w-[60px] flex-col items-center bg-[var(--hm-icon-rail)] border-r border-[var(--hm-icon-rail)] py-4">
       {/* Logo */}
-      <img src="/logo2.png" alt="Hivemind" className="mb-4 h-9 w-9 rounded-full object-cover" />
+      <img src="/logo2.png" alt="Gibert" className="mb-4 h-9 w-9 rounded-full object-cover" />
 
       <div className="flex flex-1 flex-col items-center gap-2">
         {NAV_ITEMS.map((item) => {

@@ -1,4 +1,4 @@
-![Hivemind](public/gibert.jpeg)
+![Gibert](public/gibert.jpeg)
 
 **AI-Native Team Workspace + Agent Management Platform**
 

@@ -154,7 +154,7 @@ $$;
 
 -- SEED DATA
 insert into workspaces (id, name) values
-  ('00000000-0000-0000-0000-000000000001', 'Hivemind HQ');
+  ('00000000-0000-0000-0000-000000000001', 'Gibert HQ');
 
 insert into channels (id, workspace_id, name, description, is_default) values
   ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'general', 'General discussion', true);

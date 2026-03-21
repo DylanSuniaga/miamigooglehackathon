@@ -120,7 +120,7 @@ export function UniversalInstructionsPanel({ agents }: UniversalInstructionsPane
             <p className="text-[12px] text-[#1264A3] leading-relaxed">
               These instructions are <strong>prepended silently</strong> to every qualifying agent's system prompt.
               Use them to set team conventions, product context, or tone that applies across all agents.
-              Example: <em>"Our product is Hivemind. Always respond concisely. Prefer bullet points."</em>
+              Example: <em>"Our product is Gibert. Always respond concisely. Prefer bullet points."</em>
             </p>
           </div>
 
@@ -136,7 +136,7 @@ export function UniversalInstructionsPanel({ agents }: UniversalInstructionsPane
               placeholder="Add shared context and conventions for your team's agents...
 
 Examples:
-- Our product is called Hivemind. It is a channel-based AI workspace.
+- Our product is called Gibert. It is a channel-based AI workspace.
 - Our tech stack is Next.js + Supabase + TypeScript.
 - Always respond clearly and concisely. Prefer bullet points over paragraphs.
 - When uncertain, ask a clarifying question before assuming."

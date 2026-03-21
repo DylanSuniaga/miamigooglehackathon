@@ -1,4 +1,4 @@
-# Hivemind — Community Impact
+# Gibert — Community Impact
 
 ## Option 1: Democratizing Access to Strategic Thinking
 
@@ -7,8 +7,8 @@ Knowledge inequality is one of the biggest barriers to community progress. Well-
 
 Hiring a consultant costs thousands. Getting a diverse set of perspectives (creative, analytical, technical, research-backed) on a single problem is a luxury most teams will never have.
 
-### How Hivemind Solves It
-Hivemind gives every team — regardless of budget or network — access to a full thinking team:
+### How Gibert Solves It
+Gibert gives every team — regardless of budget or network — access to a full thinking team:
 
 - **@brainstorm** generates creative, divergent ideas that push past the obvious
 - **@critic** pressure-tests assumptions and identifies blind spots before they become failures
@@ -37,8 +37,8 @@ Communities make high-stakes decisions in the worst possible environments: long 
 
 This affects everything from school board planning to neighborhood associations to mutual aid coordination. The tools exist for chatting — but not for *thinking together*.
 
-### How Hivemind Solves It
-Hivemind transforms unstructured group conversations into structured outcomes:
+### How Gibert Solves It
+Gibert transforms unstructured group conversations into structured outcomes:
 
 - **AI agents participate in the discussion** — surfacing ideas, challenging assumptions, and grounding claims in evidence — so the group thinks more rigorously without needing a professional facilitator
 - **The @context agent auto-extracts structured output** from conversations:

@@ -44,7 +44,7 @@ export default function PreviewPage() {
         <div className="text-center">
           <p className="text-lg text-gray-600">{error}</p>
           <a href="/" className="mt-2 inline-block text-sm text-blue-600 hover:underline">
-            Back to Hivemind
+            Back to Gibert
           </a>
         </div>
       </div>
@@ -63,13 +63,13 @@ export default function PreviewPage() {
     <div className="flex h-screen flex-col">
       <div className="flex items-center justify-between border-b bg-white px-4 py-2">
         <span className="text-sm font-medium text-gray-700">
-          Hivemind — Live Preview
+          Gibert — Live Preview
         </span>
         <a
           href="/"
           className="text-sm text-blue-600 hover:underline"
         >
-          Back to Hivemind
+          Back to Gibert
         </a>
       </div>
       <iframe

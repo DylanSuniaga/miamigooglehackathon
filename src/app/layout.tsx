@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hivemind",
+  title: "Gibert",
   description: "AI workspace where teams think together and agents ship the results",
 };
 
