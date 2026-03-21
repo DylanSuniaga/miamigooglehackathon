@@ -1,6 +1,10 @@
 import { embed } from "ai";
-import { google } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createServiceClient } from "@/lib/supabase/server";
+
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_API_KEY,
+});
 
 export async function generateEmbedding(text: string): Promise<number[]> {
   const { embedding } = await embed({
