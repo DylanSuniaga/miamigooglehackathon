@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { DEMO_USER } from "@/lib/demo-user";
 import { format } from "date-fns";
-import type { Message, Profile, Agent } from "@/lib/types";
+import type { Message, Profile, Agent, Attachment } from "@/lib/types";
 
 export interface DisplayMessage {
   id: string;
@@ -16,6 +16,7 @@ export interface DisplayMessage {
   model?: string;
   content: string;
   timestamp: string;
+  attachments?: Attachment[];
 }
 
 function formatTimestamp(iso: string): string {
@@ -39,6 +40,8 @@ export function useChannelMessages(channelId: string | null) {
   const lookupsLoadedRef = useRef(false);
 
   const resolveMessage = useCallback((msg: Message): DisplayMessage => {
+    const attachments = (msg.metadata as Record<string, unknown>)?.attachments as Attachment[] | undefined;
+
     if (msg.sender_type === "agent") {
       const agent = agentsRef.current.get(msg.sender_id);
       return {
@@ -50,6 +53,7 @@ export function useChannelMessages(channelId: string | null) {
         model: agent?.model,
         content: msg.content,
         timestamp: formatTimestamp(msg.created_at),
+        attachments,
       };
     }
 
@@ -62,6 +66,7 @@ export function useChannelMessages(channelId: string | null) {
       avatarColor: hashColor(msg.sender_id),
       content: msg.content,
       timestamp: formatTimestamp(msg.created_at),
+      attachments,
     };
   }, []);
 
@@ -162,16 +167,33 @@ export function useChannelMessages(channelId: string | null) {
   }, [channelId, resolveMessage]);
 
   const sendMessage = useCallback(
-    async (content: string) => {
-      if (!channelId || !content.trim()) return;
+    async (content: string, files?: File[]) => {
+      if (!channelId || (!content.trim() && (!files || files.length === 0))) return;
       const supabase = createClient();
+
+      let metadata: Record<string, unknown> = {};
+
+      if (files && files.length > 0) {
+        const formData = new FormData();
+        formData.append("channelId", channelId);
+        for (const file of files) {
+          formData.append("files", file);
+        }
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          metadata = { attachments: data.attachments };
+        } else {
+          console.error("Upload failed:", await res.text());
+        }
+      }
 
       await supabase.from("messages").insert({
         channel_id: channelId,
         sender_type: "user",
         sender_id: DEMO_USER.id,
         content: content.trim(),
-        metadata: {},
+        metadata,
       });
     },
     [channelId]

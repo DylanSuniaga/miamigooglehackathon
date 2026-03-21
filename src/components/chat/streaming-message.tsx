@@ -62,7 +62,13 @@ export function StreamingMessage({
             </span>
           )}
           <span className="text-[12px] text-[#ABABAD]">
-            {hasContent ? "typing..." : status === "searching" ? "searching the web..." : "thinking..."}
+            {hasContent
+              ? "typing..."
+              : status === "searching"
+              ? "searching the web..."
+              : status === "generating_image"
+              ? "generating image..."
+              : "thinking..."}
           </span>
         </div>
         <div className="mt-0.5 text-[15px] leading-[1.5] text-[#1D1C1D]">
@@ -141,4 +147,17 @@ const markdownComponents = {
       {children}
     </a>
   ),
+  img: ({ alt, src, ...props }: React.ComponentProps<"img">) => {
+    const srcStr = typeof src === "string" ? src : undefined;
+    return (
+      <a href={srcStr} target="_blank" rel="noopener noreferrer">
+        <img
+          alt={alt}
+          src={srcStr}
+          className="max-w-md rounded-lg border border-[#E0E0E0] my-2 cursor-pointer hover:shadow-md transition-shadow"
+          {...props}
+        />
+      </a>
+    );
+  },
 };
