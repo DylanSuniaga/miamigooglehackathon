@@ -1,4 +1,4 @@
-import { Trash2, FileText, Download } from "lucide-react";
+import { Trash2, FileText, Download, ExternalLink } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Attachment } from "@/lib/types";
 
@@ -9,6 +9,7 @@ interface AgentInfo {
 }
 
 interface MessageBubbleProps {
+  id: string;
   senderName: string;
   senderType: "user" | "agent" | "system";
   avatar: string | null;
@@ -18,11 +19,13 @@ interface MessageBubbleProps {
   content: string;
   timestamp: string;
   attachments?: Attachment[];
+  metadata?: Record<string, unknown>;
   agents?: AgentInfo[];
   onDelete?: () => void;
 }
 
 export function MessageBubble({
+  id,
   senderName,
   senderType,
   avatar,
@@ -32,11 +35,14 @@ export function MessageBubble({
   content,
   timestamp,
   attachments,
+  metadata,
   agents = [],
   onDelete,
 }: MessageBubbleProps) {
   const isAgent = senderType === "agent";
   const modelShort = model?.includes(":") ? model.split(":")[1] : model;
+  const execution = metadata?.execution as { language?: string; code?: string; html?: string } | undefined;
+  const hasHtmlPreview = execution?.html;
 
   return (
     <div
@@ -83,6 +89,19 @@ export function MessageBubble({
             <span className="whitespace-pre-wrap">
               {renderUserContent(content, agents)}
             </span>
+          )}
+          {hasHtmlPreview && (
+            <div className="mt-2">
+              <a
+                href={`/preview/${id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--hm-border)] bg-[var(--hm-surface-light)] px-3 py-1.5 text-[13px] font-medium text-[var(--hm-text)] hover:bg-[var(--hm-surface)] transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                View Live Preview
+              </a>
+            </div>
           )}
           {attachments && attachments.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-2">

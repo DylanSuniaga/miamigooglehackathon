@@ -18,6 +18,7 @@ interface Message {
   content: string;
   timestamp: string;
   attachments?: Attachment[];
+  metadata?: Record<string, unknown>;
 }
 
 interface AgentInfo {

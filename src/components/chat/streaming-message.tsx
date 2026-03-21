@@ -68,6 +68,8 @@ export function StreamingMessage({
               ? "searching the web..."
               : status === "generating_image"
               ? "generating image..."
+              : status === "executing_code"
+              ? "executing code..."
               : "thinking..."}
           </span>
         </div>
