@@ -91,14 +91,24 @@ export function usePyodide() {
     // Capture stdout
     const logs: string[] = [];
     const setup = `
-import sys, io
+import sys, io, warnings
 _stdout_capture = io.StringIO()
 sys.stdout = _stdout_capture
+
+# Suppress SyntaxWarning about escape sequences (harmless in generated code)
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 # Pre-emptively disable plt.show() to prevent Pyodide TimerWasm UI crashes, we evaluate manually
 try:
     import matplotlib.pyplot as _plt
     _plt.show = lambda *args, **kwargs: None
+    # Patch TimerWasm to prevent '_timer' AttributeError spam during garbage collection
+    try:
+        from matplotlib_pyodide.browser_backend import TimerWasm
+        if not hasattr(TimerWasm, '_timer'):
+            TimerWasm._timer = None
+    except Exception:
+        pass
 except ImportError:
     pass
 `;
