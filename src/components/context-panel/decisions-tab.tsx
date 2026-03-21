@@ -23,8 +23,8 @@ export function DecisionsTab({ decisions, onUpdateStatus, onDelete }: DecisionsT
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center px-4">
         <span className="text-2xl mb-2">📋</span>
-        <p className="text-sm text-[#616061]">No decisions extracted yet.</p>
-        <p className="text-xs text-[#616061] mt-1">
+        <p className="text-sm text-[var(--hm-muted)]">No decisions extracted yet.</p>
+        <p className="text-xs text-[var(--hm-muted)] mt-1">
           Use @context or click Extract to find decisions in the conversation.
         </p>
       </div>
@@ -39,19 +39,19 @@ export function DecisionsTab({ decisions, onUpdateStatus, onDelete }: DecisionsT
           return (
             <div
               key={d.id}
-              className="rounded-lg border border-[#E0E0E0] bg-white p-3 group"
+              className="rounded-lg border border-[var(--hm-border)] bg-[var(--hm-bg)] p-3 group"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm text-[#1D1C1D] flex-1">{d.content}</p>
+                <p className="text-sm text-[var(--hm-text)] flex-1">{d.content}</p>
                 <button
                   onClick={() => onDelete(d.id)}
-                  className="opacity-0 group-hover:opacity-100 text-[#616061] hover:text-red-500 transition-opacity shrink-0"
+                  className="opacity-0 group-hover:opacity-100 text-[var(--hm-muted)] hover:text-red-500 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
               {d.rationale && (
-                <p className="text-xs text-[#616061] mt-1">{d.rationale}</p>
+                <p className="text-xs text-[var(--hm-muted)] mt-1">{d.rationale}</p>
               )}
               <div className="flex items-center gap-1.5 mt-2">
                 {STATUSES.map((s) => {

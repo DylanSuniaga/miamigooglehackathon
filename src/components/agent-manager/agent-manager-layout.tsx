@@ -64,7 +64,7 @@ export function AgentManagerLayout() {
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <span className="text-[#616061] text-sm">Loading agents...</span>
+        <span className="text-[var(--hm-muted)] text-sm">Loading agents...</span>
       </div>
     );
   }
@@ -81,16 +81,16 @@ export function AgentManagerLayout() {
 
       {/* Center: Config Editor or Run History */}
       {selectedAgent ? (
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
+        <div className="flex-1 flex flex-col min-w-0 bg-[var(--hm-bg)]">
           {/* Tab bar */}
-          <div className="flex items-center justify-between border-b border-[#E0E0E0] bg-white px-6">
+          <div className="flex items-center justify-between border-b border-[var(--hm-border)] bg-[var(--hm-bg)] px-6">
             <div className="flex">
               <button
                 onClick={() => setActiveTab("config")}
                 className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
                   activeTab === "config"
-                    ? "border-[#1D1C1D] text-[#1D1C1D]"
-                    : "border-transparent text-[#616061] hover:text-[#1D1C1D]"
+                    ? "border-[var(--hm-text)] text-[var(--hm-text)]"
+                    : "border-transparent text-[var(--hm-muted)] hover:text-[var(--hm-text)]"
                 }`}
               >
                 Configuration
@@ -99,13 +99,13 @@ export function AgentManagerLayout() {
                 onClick={() => setActiveTab("runs")}
                 className={`px-4 py-2.5 text-[13px] font-medium border-b-2 transition-colors ${
                   activeTab === "runs"
-                    ? "border-[#1D1C1D] text-[#1D1C1D]"
-                    : "border-transparent text-[#616061] hover:text-[#1D1C1D]"
+                    ? "border-[var(--hm-text)] text-[var(--hm-text)]"
+                    : "border-transparent text-[var(--hm-muted)] hover:text-[var(--hm-text)]"
                 }`}
               >
                 Run History
                 {runs.length > 0 && (
-                  <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full bg-[#E0E0E0] text-[#616061]">
+                  <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full bg-[var(--hm-border)] text-[var(--hm-muted)]">
                     {runs.length}
                   </span>
                 )}
@@ -114,13 +114,13 @@ export function AgentManagerLayout() {
 
             {/* View Mode Toggle (Only show in Config tab) */}
             {activeTab === "config" && (
-              <div className="flex items-center p-0.5 bg-[#F8F8F8] border border-[#E0E0E0] rounded-md">
+              <div className="flex items-center p-0.5 bg-[var(--hm-surface-light)] border border-[var(--hm-border)] rounded-md">
                 <button
                   onClick={() => setConfigViewMode("form")}
                   className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-sm transition-colors ${
                     configViewMode === "form"
-                      ? "bg-white text-[#1D1C1D] shadow-sm border border-[#E0E0E0]"
-                      : "text-[#616061] hover:text-[#1D1C1D] border border-transparent"
+                      ? "bg-[var(--hm-bg)] text-[var(--hm-text)] shadow-sm border border-[var(--hm-border)]"
+                      : "text-[var(--hm-muted)] hover:text-[var(--hm-text)] border border-transparent"
                   }`}
                 >
                   <Settings2 className="w-3.5 h-3.5" />
@@ -130,8 +130,8 @@ export function AgentManagerLayout() {
                   onClick={() => setConfigViewMode("map")}
                   className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-sm transition-colors ${
                     configViewMode === "map"
-                      ? "bg-white text-[#1D1C1D] shadow-sm border border-[#E0E0E0]"
-                      : "text-[#616061] hover:text-[#1D1C1D] border border-transparent"
+                      ? "bg-[var(--hm-bg)] text-[var(--hm-text)] shadow-sm border border-[var(--hm-border)]"
+                      : "text-[var(--hm-muted)] hover:text-[var(--hm-text)] border border-transparent"
                   }`}
                 >
                   <Map className="w-3.5 h-3.5" />
@@ -167,12 +167,12 @@ export function AgentManagerLayout() {
           )}
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center bg-white">
+        <div className="flex-1 flex items-center justify-center bg-[var(--hm-bg)]">
           <div className="text-center">
-            <p className="text-[15px] text-[#616061]">
+            <p className="text-[15px] text-[var(--hm-muted)]">
               Select an agent to configure
             </p>
-            <p className="text-[13px] text-[#ABABAD] mt-1">
+            <p className="text-[13px] text-[var(--hm-muted-light)] mt-1">
               Or create a new one with the + button
             </p>
           </div>

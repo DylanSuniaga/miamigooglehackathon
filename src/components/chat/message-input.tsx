@@ -161,7 +161,7 @@ export function MessageInput({
   }
 
   return (
-    <div className="bg-white px-5 py-3">
+    <div className="bg-[var(--hm-bg)] px-5 py-3">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -173,18 +173,18 @@ export function MessageInput({
       />
 
       {/* Input area */}
-      <div className="relative rounded-lg border border-[#E0E0E0] focus-within:border-[#1264A3] focus-within:shadow-[0_0_0_1px_#1264A3]">
+      <div className="relative rounded-lg border border-[var(--hm-border)] focus-within:border-[var(--hm-focus)] focus-within:shadow-[0_0_0_1px_var(--hm-focus)]">
         {/* Agent mention dropdown */}
         {showDropdown && filteredAgents.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-1 w-64 rounded-lg border border-[#E0E0E0] bg-white shadow-lg z-50 overflow-hidden">
-            <div className="px-3 py-1.5 text-[11px] font-semibold text-[#616061] uppercase tracking-wide border-b border-[#F0F0F0]">
+          <div className="absolute bottom-full left-0 mb-1 w-64 rounded-lg border border-[var(--hm-border)] bg-[var(--hm-bg)] shadow-lg z-50 overflow-hidden">
+            <div className="px-3 py-1.5 text-[11px] font-semibold text-[var(--hm-muted)] uppercase tracking-wide border-b border-[var(--hm-surface)]">
               Agents
             </div>
             {filteredAgents.map((agent, i) => (
               <button
                 key={agent.handle}
                 className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors ${
-                  i === selectedIndex ? "bg-[#1264A3] text-white" : "hover:bg-[#F8F8F8] text-[#1D1C1D]"
+                  i === selectedIndex ? "bg-[var(--hm-focus)] text-white" : "hover:bg-[var(--hm-surface-light)] text-[var(--hm-text)]"
                 }`}
                 onMouseDown={(e) => {
                   e.preventDefault(); // prevent blur
@@ -207,7 +207,7 @@ export function MessageInput({
             {pendingFiles.map((file, i) => (
               <div
                 key={`${file.name}-${i}`}
-                className="relative group flex items-center gap-2 rounded-md border border-[#E0E0E0] bg-[#F8F8F8] p-1.5 pr-7"
+                className="relative group flex items-center gap-2 rounded-md border border-[var(--hm-border)] bg-[var(--hm-surface-light)] p-1.5 pr-7"
               >
                 {isImageFile(file) ? (
                   <img
@@ -216,21 +216,21 @@ export function MessageInput({
                     className="h-10 w-10 rounded object-cover"
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded bg-[#E0E0E0]">
-                    <FileText className="h-5 w-5 text-[#616061]" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded bg-[var(--hm-border)]">
+                    <FileText className="h-5 w-5 text-[var(--hm-muted)]" />
                   </div>
                 )}
                 <div className="min-w-0">
-                  <div className="truncate text-[12px] font-medium text-[#1D1C1D] max-w-[120px]">
+                  <div className="truncate text-[12px] font-medium text-[var(--hm-text)] max-w-[120px]">
                     {file.name}
                   </div>
-                  <div className="text-[11px] text-[#616061]">
+                  <div className="text-[11px] text-[var(--hm-muted)]">
                     {formatFileSize(file.size)}
                   </div>
                 </div>
                 <button
                   onClick={() => removeFile(i)}
-                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#E0E0E0] text-[#616061] hover:bg-[#CCCCCC] hover:text-[#1D1C1D]"
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--hm-border)] text-[var(--hm-muted)] hover:bg-[var(--hm-surface-hover)] hover:text-[var(--hm-text)]"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -245,24 +245,24 @@ export function MessageInput({
           onChange={handleChange}
           placeholder={`Message #${channelName}`}
           rows={1}
-          className="w-full resize-none bg-transparent px-3 py-2 text-[14px] text-[#1D1C1D] placeholder-[#616061] outline-none"
+          className="w-full resize-none bg-transparent px-3 py-2 text-[14px] text-[var(--hm-text)] placeholder-[var(--hm-muted)] outline-none"
           onKeyDown={handleKeyDown}
         />
 
         {/* Toolbar row */}
-        <div className="flex items-center justify-between px-3 py-1.5 border-t border-[#F0F0F0]">
+        <div className="flex items-center justify-between px-3 py-1.5 border-t border-[var(--hm-surface)]">
           <div className="flex items-center gap-1.5">
             <button
-              className="flex h-7 w-7 items-center justify-center rounded text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]"
+              className="flex h-7 w-7 items-center justify-center rounded text-[var(--hm-muted)] hover:bg-[var(--hm-surface)] hover:text-[var(--hm-text)]"
               onClick={() => fileInputRef.current?.click()}
             >
               <Paperclip className="h-4 w-4" />
             </button>
-            <button className="flex h-7 w-7 items-center justify-center rounded text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]">
+            <button className="flex h-7 w-7 items-center justify-center rounded text-[var(--hm-muted)] hover:bg-[var(--hm-surface)] hover:text-[var(--hm-text)]">
               <Smile className="h-4 w-4" />
             </button>
             <button
-              className="flex h-7 w-7 items-center justify-center rounded text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]"
+              className="flex h-7 w-7 items-center justify-center rounded text-[var(--hm-muted)] hover:bg-[var(--hm-surface)] hover:text-[var(--hm-text)]"
               onClick={() => {
                 // Insert @ at cursor and trigger dropdown
                 const textarea = textareaRef.current;
@@ -285,7 +285,7 @@ export function MessageInput({
             >
               <AtSign className="h-4 w-4" />
             </button>
-            <button className="flex h-7 w-7 items-center justify-center rounded text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]">
+            <button className="flex h-7 w-7 items-center justify-center rounded text-[var(--hm-muted)] hover:bg-[var(--hm-surface)] hover:text-[var(--hm-text)]">
               <Type className="h-4 w-4" />
             </button>
           </div>
@@ -293,8 +293,8 @@ export function MessageInput({
           <button
             className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
               hasContent
-                ? "bg-[#1D1C1D] text-white"
-                : "bg-[#E0E0E0] text-white"
+                ? "bg-[var(--hm-text)] text-white"
+                : "bg-[var(--hm-border)] text-white"
             }`}
             disabled={!hasContent}
             onClick={handleSend}

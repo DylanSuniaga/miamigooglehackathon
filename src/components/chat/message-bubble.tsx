@@ -40,13 +40,13 @@ export function MessageBubble({
 
   return (
     <div
-      className="group relative flex gap-3 px-5 py-3 hover:bg-[#F8F8F8]"
+      className="group relative flex gap-3 px-5 py-3 hover:bg-[var(--hm-surface-light)]"
       style={isAgent && color ? { borderLeft: `3px solid ${color}` } : undefined}
     >
       {/* Avatar */}
       <div className="flex-shrink-0 pt-0.5">
         {isAgent ? (
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0F0F0] text-lg">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--hm-surface)] text-lg">
             {avatar}
           </div>
         ) : (
@@ -62,17 +62,17 @@ export function MessageBubble({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="text-[15px] font-bold text-[#1D1C1D]">
+          <span className="text-[15px] font-bold text-[var(--hm-text)]">
             {senderName}
           </span>
-          <span className="text-[12px] text-[#ABABAD]">{timestamp}</span>
+          <span className="text-[12px] text-[var(--hm-muted-light)]">{timestamp}</span>
           {isAgent && modelShort && (
-            <span className="rounded bg-[#F0F0F0] px-1.5 py-0.5 text-[10px] font-mono text-[#616061]">
+            <span className="rounded bg-[var(--hm-surface)] px-1.5 py-0.5 text-[10px] font-mono text-[var(--hm-muted)]">
               {modelShort}
             </span>
           )}
         </div>
-        <div className="mt-0.5 text-[15px] leading-[1.5] text-[#1D1C1D]">
+        <div className="mt-0.5 text-[15px] leading-[1.5] text-[var(--hm-text)]">
           {isAgent ? (
             <div className="prose-sm max-w-none">
               <ReactMarkdown components={markdownComponents}>
@@ -97,7 +97,7 @@ export function MessageBubble({
                     <img
                       src={att.url}
                       alt={att.filename}
-                      className="max-w-md rounded-lg border border-[#E0E0E0] cursor-pointer hover:shadow-md transition-shadow"
+                      className="max-w-md rounded-lg border border-[var(--hm-border)] cursor-pointer hover:shadow-md transition-shadow"
                     />
                   </a>
                 ) : (
@@ -106,14 +106,14 @@ export function MessageBubble({
                     href={att.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-lg border border-[#E0E0E0] bg-[#F8F8F8] px-3 py-2 hover:bg-[#F0F0F0] transition-colors"
+                    className="flex items-center gap-2 rounded-lg border border-[var(--hm-border)] bg-[var(--hm-surface-light)] px-3 py-2 hover:bg-[var(--hm-surface)] transition-colors"
                   >
-                    <FileText className="h-5 w-5 text-[#616061]" />
+                    <FileText className="h-5 w-5 text-[var(--hm-muted)]" />
                     <div>
-                      <div className="text-[13px] font-medium text-[#1D1C1D]">{att.filename}</div>
-                      <div className="text-[11px] text-[#616061]">{formatBytes(att.size)}</div>
+                      <div className="text-[13px] font-medium text-[var(--hm-text)]">{att.filename}</div>
+                      <div className="text-[11px] text-[var(--hm-muted)]">{formatBytes(att.size)}</div>
                     </div>
-                    <Download className="h-4 w-4 text-[#616061]" />
+                    <Download className="h-4 w-4 text-[var(--hm-muted)]" />
                   </a>
                 )
               )}
@@ -124,10 +124,10 @@ export function MessageBubble({
 
       {/* Hover actions */}
       {onDelete && (
-        <div className="absolute right-4 top-2 hidden group-hover:flex items-center gap-0.5 rounded-md border border-[#E0E0E0] bg-white shadow-sm">
+        <div className="absolute right-4 top-2 hidden group-hover:flex items-center gap-0.5 rounded-md border border-[var(--hm-border)] bg-[var(--hm-bg)] shadow-sm">
           <button
             onClick={onDelete}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-[#616061] hover:bg-[#FDE8E8] hover:text-red-600"
+            className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--hm-muted)] hover:bg-[#FDE8E8] hover:text-red-600"
             title="Delete message"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -174,13 +174,13 @@ function renderUserContent(content: string, agents: AgentInfo[]) {
 
 const markdownComponents = {
   h1: ({ children, ...props }: React.ComponentProps<"h1">) => (
-    <h1 className="text-xl font-bold mt-4 mb-2 text-[#1D1C1D]" {...props}>{children}</h1>
+    <h1 className="text-xl font-bold mt-4 mb-2 text-[var(--hm-text)]" {...props}>{children}</h1>
   ),
   h2: ({ children, ...props }: React.ComponentProps<"h2">) => (
-    <h2 className="text-lg font-bold mt-3 mb-1.5 text-[#1D1C1D]" {...props}>{children}</h2>
+    <h2 className="text-lg font-bold mt-3 mb-1.5 text-[var(--hm-text)]" {...props}>{children}</h2>
   ),
   h3: ({ children, ...props }: React.ComponentProps<"h3">) => (
-    <h3 className="text-base font-bold mt-2 mb-1 text-[#1D1C1D]" {...props}>{children}</h3>
+    <h3 className="text-base font-bold mt-2 mb-1 text-[var(--hm-text)]" {...props}>{children}</h3>
   ),
   p: ({ children, ...props }: React.ComponentProps<"p">) => (
     <p className="mb-2 last:mb-0" {...props}>{children}</p>
@@ -204,27 +204,27 @@ const markdownComponents = {
     const isBlock = className?.includes("language-");
     if (isBlock) {
       return (
-        <code className={`block bg-[#F5F5F5] rounded p-3 my-2 text-[13px] font-mono overflow-x-auto whitespace-pre ${className}`} {...props}>
+        <code className={`block bg-[var(--hm-code-bg)] rounded p-3 my-2 text-[13px] font-mono overflow-x-auto whitespace-pre ${className}`} {...props}>
           {children}
         </code>
       );
     }
     return (
-      <code className="bg-[#F5F5F5] rounded px-1 py-0.5 text-[13px] font-mono text-[#E01E5A]" {...props}>
+      <code className="bg-[var(--hm-code-bg)] rounded px-1 py-0.5 text-[13px] font-mono text-[var(--hm-code-text)]" {...props}>
         {children}
       </code>
     );
   },
   pre: ({ children, ...props }: React.ComponentProps<"pre">) => (
-    <pre className="bg-[#F5F5F5] rounded-md my-2 overflow-x-auto" {...props}>{children}</pre>
+    <pre className="bg-[var(--hm-code-bg)] rounded-md my-2 overflow-x-auto" {...props}>{children}</pre>
   ),
   blockquote: ({ children, ...props }: React.ComponentProps<"blockquote">) => (
-    <blockquote className="border-l-4 border-[#E0E0E0] pl-3 my-2 text-[#616061] italic" {...props}>
+    <blockquote className="border-l-4 border-[var(--hm-border)] pl-3 my-2 text-[var(--hm-muted)] italic" {...props}>
       {children}
     </blockquote>
   ),
   a: ({ children, ...props }: React.ComponentProps<"a">) => (
-    <a className="text-[#1264A3] hover:underline" target="_blank" rel="noopener noreferrer" {...props}>
+    <a className="text-[var(--hm-link)] hover:underline" target="_blank" rel="noopener noreferrer" {...props}>
       {children}
     </a>
   ),
@@ -235,7 +235,7 @@ const markdownComponents = {
         <img
           alt={alt}
           src={srcStr}
-          className="max-w-md rounded-lg border border-[#E0E0E0] my-2 cursor-pointer hover:shadow-md transition-shadow"
+          className="max-w-md rounded-lg border border-[var(--hm-border)] my-2 cursor-pointer hover:shadow-md transition-shadow"
           {...props}
         />
       </a>

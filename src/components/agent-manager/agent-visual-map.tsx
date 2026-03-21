@@ -19,24 +19,24 @@ import type { Agent, AgentContextDocument } from "@/lib/types";
 function AgentNodeComponent({ data }: { data: any }) {
   return (
     <div
-      className="px-4 py-3 bg-white rounded-xl shadow-sm border-[1.5px] min-w-[200px]"
+      className="px-4 py-3 bg-[var(--hm-bg)] rounded-xl shadow-sm border-[1.5px] min-w-[200px]"
       style={{ borderColor: data.color || "#1D1C1D" }}
     >
-      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-[#616061]" />
+      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-[var(--hm-muted)]" />
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#F8F8F8] text-xl border border-[#E0E0E0]">
-          {data.emoji || <Bot className="w-5 h-5 text-[#616061]" />}
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[var(--hm-surface-light)] text-xl border border-[var(--hm-border)]">
+          {data.emoji || <Bot className="w-5 h-5 text-[var(--hm-muted)]" />}
         </div>
         <div>
-          <div className="font-semibold text-[15px] text-[#1D1C1D]">
+          <div className="font-semibold text-[15px] text-[var(--hm-text)]">
             {data.name}
           </div>
-          <div className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-[#F8F8F8] text-[#616061] border border-[#E0E0E0] inline-block mt-1 uppercase tracking-wider">
+          <div className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-[var(--hm-surface-light)] text-[var(--hm-muted)] border border-[var(--hm-border)] inline-block mt-1 uppercase tracking-wider">
             {data.type}
           </div>
         </div>
       </div>
-      <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-[#616061]" />
+      <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-[var(--hm-muted)]" />
     </div>
   );
 }
@@ -46,24 +46,24 @@ const AgentNode = memo(AgentNodeComponent);
 function ContextNodeComponent({ data }: { data: any }) {
   return (
     <div
-      className={`px-3 py-2 bg-white rounded-lg shadow-sm border min-w-[160px] transition-opacity cursor-pointer hover:border-[#1D1C1D] ${
-        data.isActive ? "border-[#E0E0E0]" : "border-dashed border-[#E0E0E0] opacity-60"
+      className={`px-3 py-2 bg-[var(--hm-bg)] rounded-lg shadow-sm border min-w-[160px] transition-opacity cursor-pointer hover:border-[var(--hm-text)] ${
+        data.isActive ? "border-[var(--hm-border)]" : "border-dashed border-[var(--hm-border)] opacity-60"
       }`}
     >
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded flex items-center justify-center bg-[#F8F8F8] text-[#616061]">
+        <div className="w-6 h-6 rounded flex items-center justify-center bg-[var(--hm-surface-light)] text-[var(--hm-muted)]">
           <FileText className="w-3.5 h-3.5" />
         </div>
         <div className="flex flex-col">
-          <span className="font-medium text-[13px] text-[#1D1C1D] truncate max-w-[120px]">
+          <span className="font-medium text-[13px] text-[var(--hm-text)] truncate max-w-[120px]">
             {data.title}
           </span>
-          <span className="text-[10px] text-[#616061] uppercase tracking-wider">
+          <span className="text-[10px] text-[var(--hm-muted)] uppercase tracking-wider">
             {data.docType}
           </span>
         </div>
       </div>
-      <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-[#616061]" />
+      <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-[var(--hm-muted)]" />
     </div>
   );
 }
@@ -72,22 +72,22 @@ const ContextNode = memo(ContextNodeComponent);
 
 function ConfigNodeComponent({ data }: { data: any }) {
   return (
-    <div className="px-3 py-2 bg-[#F8F8F8] rounded-lg shadow-sm border border-[#E0E0E0] min-w-[180px] cursor-pointer hover:border-[#1D1C1D]">
-      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-[#616061]" />
+    <div className="px-3 py-2 bg-[var(--hm-surface-light)] rounded-lg shadow-sm border border-[var(--hm-border)] min-w-[180px] cursor-pointer hover:border-[var(--hm-text)]">
+      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-[var(--hm-muted)]" />
       <div className="flex items-center gap-2 mb-2">
-        <Settings className="w-4 h-4 text-[#616061]" />
-        <span className="font-medium text-[12px] text-[#1D1C1D]">Configuration</span>
+        <Settings className="w-4 h-4 text-[var(--hm-muted)]" />
+        <span className="font-medium text-[12px] text-[var(--hm-text)]">Configuration</span>
       </div>
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-[#616061]">Model</span>
-          <span className="text-[11px] font-medium text-[#1D1C1D] bg-white px-1 py-0.5 rounded border border-[#E0E0E0]">
+          <span className="text-[11px] text-[var(--hm-muted)]">Model</span>
+          <span className="text-[11px] font-medium text-[var(--hm-text)] bg-[var(--hm-bg)] px-1 py-0.5 rounded border border-[var(--hm-border)]">
             {data.model.replace("google:", "").replace("openai:", "").replace("anthropic:", "")}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] text-[#616061]">Temp</span>
-          <span className="text-[11px] font-medium text-[#1D1C1D] bg-white px-1 py-0.5 rounded border border-[#E0E0E0]">
+          <span className="text-[11px] text-[var(--hm-muted)]">Temp</span>
+          <span className="text-[11px] font-medium text-[var(--hm-text)] bg-[var(--hm-bg)] px-1 py-0.5 rounded border border-[var(--hm-border)]">
             {data.temperature.toFixed(1)}
           </span>
         </div>
@@ -196,7 +196,7 @@ export function AgentVisualMap({ agent, contextDocs, onNodeDoubleClick }: AgentV
   );
 
   return (
-    <div className="w-full h-full bg-[#FCFCFC]">
+    <div className="w-full h-full bg-[var(--hm-bg)]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -206,7 +206,7 @@ export function AgentVisualMap({ agent, contextDocs, onNodeDoubleClick }: AgentV
         onNodeDoubleClick={handleNodeDoubleClick}
         fitView
         fitViewOptions={{ padding: 0.2 }}
-        className="[&_.react-flow__controls-button]:border-[#E0E0E0] [&_.react-flow__controls-button]:bg-white [&_.react-flow__controls-button]:text-[#1D1C1D]"
+        className="[&_.react-flow__controls-button]:border-[var(--hm-border)] [&_.react-flow__controls-button]:bg-[var(--hm-bg)] [&_.react-flow__controls-button]:text-[var(--hm-text)]"
       >
         <Background gap={16} size={1} color="#E0E0E0" />
         <Controls showInteractive={false} />

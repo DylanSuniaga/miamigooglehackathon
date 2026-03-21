@@ -38,8 +38,8 @@ export function AssumptionsTab({
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center px-4">
         <span className="text-2xl mb-2">💡</span>
-        <p className="text-sm text-[#616061]">No assumptions tracked yet.</p>
-        <p className="text-xs text-[#616061] mt-1">
+        <p className="text-sm text-[var(--hm-muted)]">No assumptions tracked yet.</p>
+        <p className="text-xs text-[var(--hm-muted)] mt-1">
           Assumptions will be extracted and tracked for validation.
         </p>
       </div>
@@ -54,33 +54,33 @@ export function AssumptionsTab({
           return (
             <div
               key={a.id}
-              className={`rounded-lg border bg-white p-3 group ${
-                a.flagged ? "border-amber-300" : "border-[#E0E0E0]"
+              className={`rounded-lg border bg-[var(--hm-bg)] p-3 group ${
+                a.flagged ? "border-amber-300" : "border-[var(--hm-border)]"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="text-sm text-[#1D1C1D] flex-1">{a.assumption}</p>
+                <p className="text-sm text-[var(--hm-text)] flex-1">{a.assumption}</p>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => onToggleFlag(a.id, !a.flagged)}
                     className={`transition-colors ${
                       a.flagged
                         ? "text-amber-500"
-                        : "opacity-0 group-hover:opacity-100 text-[#616061] hover:text-amber-500"
+                        : "opacity-0 group-hover:opacity-100 text-[var(--hm-muted)] hover:text-amber-500"
                     }`}
                   >
                     <Flag className="h-3.5 w-3.5" fill={a.flagged ? "currentColor" : "none"} />
                   </button>
                   <button
                     onClick={() => onDelete(a.id)}
-                    className="opacity-0 group-hover:opacity-100 text-[#616061] hover:text-red-500 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 text-[var(--hm-muted)] hover:text-red-500 transition-opacity"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
               {a.evidence && (
-                <p className="text-xs text-[#616061] mt-1">{a.evidence}</p>
+                <p className="text-xs text-[var(--hm-muted)] mt-1">{a.evidence}</p>
               )}
               <div className="flex items-center gap-1.5 mt-2">
                 {CONFIDENCES.map((c) => {

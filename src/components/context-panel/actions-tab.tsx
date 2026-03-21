@@ -25,8 +25,8 @@ export function ActionsTab({ actions, onUpdateStatus, onDelete }: ActionsTabProp
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center px-4">
         <span className="text-2xl mb-2">✅</span>
-        <p className="text-sm text-[#616061]">No action items yet.</p>
-        <p className="text-xs text-[#616061] mt-1">
+        <p className="text-sm text-[var(--hm-muted)]">No action items yet.</p>
+        <p className="text-xs text-[var(--hm-muted)] mt-1">
           Action items will appear here when extracted from conversations.
         </p>
       </div>
@@ -42,26 +42,26 @@ export function ActionsTab({ actions, onUpdateStatus, onDelete }: ActionsTabProp
           return (
             <div
               key={a.id}
-              className="rounded-lg border border-[#E0E0E0] bg-white p-3 group"
+              className="rounded-lg border border-[var(--hm-border)] bg-[var(--hm-bg)] p-3 group"
             >
               <div className="flex items-start justify-between gap-2">
                 <p
                   className={`text-sm flex-1 ${
                     isDone
-                      ? "line-through text-[#616061]"
-                      : "text-[#1D1C1D]"
+                      ? "line-through text-[var(--hm-muted)]"
+                      : "text-[var(--hm-text)]"
                   }`}
                 >
                   {a.description}
                 </p>
                 <button
                   onClick={() => onDelete(a.id)}
-                  className="opacity-0 group-hover:opacity-100 text-[#616061] hover:text-red-500 transition-opacity shrink-0"
+                  className="opacity-0 group-hover:opacity-100 text-[var(--hm-muted)] hover:text-red-500 transition-opacity shrink-0"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <div className="flex items-center gap-2 mt-2 text-xs text-[#616061]">
+              <div className="flex items-center gap-2 mt-2 text-xs text-[var(--hm-muted)]">
                 {a.owner_name && <span>{a.owner_name}</span>}
                 {a.owner_name && a.due_date && <span>·</span>}
                 {a.due_date && (

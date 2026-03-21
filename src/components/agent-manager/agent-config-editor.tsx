@@ -77,9 +77,9 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-white">
+    <div className="flex-1 flex flex-col min-w-0 bg-[var(--hm-bg)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#E0E0E0]">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--hm-border)]">
         <div className="flex items-center gap-3">
           <div
             className="flex h-9 w-9 items-center justify-center rounded-lg text-xl"
@@ -88,10 +88,10 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
             {agent.avatar_emoji}
           </div>
           <div>
-            <h2 className="text-[16px] font-bold text-[#1D1C1D]">
+            <h2 className="text-[16px] font-bold text-[var(--hm-text)]">
               {agent.display_name}
             </h2>
-            <span className="text-[12px] text-[#ABABAD] font-mono">
+            <span className="text-[12px] text-[var(--hm-muted-light)] font-mono">
               @{agent.handle}
             </span>
           </div>
@@ -101,7 +101,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
           {hasChanges && (
             <button
               onClick={handleReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-[#616061] hover:text-[#1D1C1D] rounded-md hover:bg-[#F0F0F0] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] text-[var(--hm-muted)] hover:text-[var(--hm-text)] rounded-md hover:bg-[var(--hm-surface)] transition-colors"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Reset
@@ -114,8 +114,8 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
               saved
                 ? "bg-green-500 text-white"
                 : hasChanges
-                ? "bg-[#1D1C1D] text-white hover:bg-[#333]"
-                : "bg-[#E0E0E0] text-[#ABABAD] cursor-not-allowed"
+                ? "bg-[var(--hm-text)] text-white hover:bg-[#333]"
+                : "bg-[var(--hm-border)] text-[var(--hm-muted-light)] cursor-not-allowed"
             }`}
           >
             <Save className="h-3.5 w-3.5" />
@@ -129,10 +129,10 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
         {/* Active toggle */}
         <div className="flex items-center justify-between">
           <div>
-            <label className="text-[13px] font-semibold text-[#1D1C1D]">
+            <label className="text-[13px] font-semibold text-[var(--hm-text)]">
               Active
             </label>
-            <p className="text-[12px] text-[#616061] mt-0.5">
+            <p className="text-[12px] text-[var(--hm-muted)] mt-0.5">
               Inactive agents won&apos;t appear in channels
             </p>
           </div>
@@ -143,7 +143,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
             }`}
           >
             <span
-              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-[var(--hm-bg)] shadow transition-transform ${
                 isActive ? "left-5.5" : "left-0.5"
               }`}
             />
@@ -152,7 +152,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
 
         {/* Description */}
         <div>
-          <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+          <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
             Description
           </label>
           <input
@@ -160,20 +160,20 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What does this agent do?"
-            className="w-full px-3 py-2 text-[14px] text-[#1D1C1D] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] focus:ring-1 focus:ring-[#1264A3] outline-none placeholder-[#ABABAD]"
+            className="w-full px-3 py-2 text-[14px] text-[var(--hm-text)] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] focus:ring-1 focus:ring-[var(--hm-focus)] outline-none placeholder-[var(--hm-muted-light)]"
           />
         </div>
 
         {/* Model + Temperature row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+            <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
               Model
             </label>
             <select
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              className="w-full px-3 py-2 text-[14px] text-[#1D1C1D] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] focus:ring-1 focus:ring-[#1264A3] outline-none bg-white"
+              className="w-full px-3 py-2 text-[14px] text-[var(--hm-text)] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] focus:ring-1 focus:ring-[var(--hm-focus)] outline-none bg-[var(--hm-bg)]"
             >
               {AVAILABLE_MODELS.map((m) => (
                 <option key={m.value} value={m.value}>
@@ -184,11 +184,11 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
           </div>
 
           <div>
-            <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+            <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
               Temperature: {temperature.toFixed(1)}
             </label>
             <div className="flex items-center gap-3 mt-1">
-              <span className="text-[11px] text-[#ABABAD]">Precise</span>
+              <span className="text-[11px] text-[var(--hm-muted-light)]">Precise</span>
               <input
                 type="range"
                 min="0"
@@ -196,16 +196,16 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
                 step="0.1"
                 value={temperature}
                 onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                className="flex-1 h-1.5 bg-[#E0E0E0] rounded-full appearance-none cursor-pointer accent-[#1D1C1D]"
+                className="flex-1 h-1.5 bg-[var(--hm-border)] rounded-full appearance-none cursor-pointer accent-[var(--hm-text)]"
               />
-              <span className="text-[11px] text-[#ABABAD]">Creative</span>
+              <span className="text-[11px] text-[var(--hm-muted-light)]">Creative</span>
             </div>
           </div>
         </div>
 
         {/* Color picker */}
         <div>
-          <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+          <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
             Agent Color
           </label>
           <div className="flex gap-2">
@@ -215,7 +215,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
                 onClick={() => setColor(c)}
                 className={`h-7 w-7 rounded-full border-2 transition-transform ${
                   color === c
-                    ? "border-[#1D1C1D] scale-110"
+                    ? "border-[var(--hm-text)] scale-110"
                     : "border-transparent hover:scale-105"
                 }`}
                 style={{ backgroundColor: c }}
@@ -226,40 +226,40 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
 
         {/* System prompt */}
         <div>
-          <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+          <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
             System Prompt
           </label>
           <textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={12}
-            className="w-full px-3 py-2.5 text-[13px] leading-[1.6] text-[#1D1C1D] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] focus:ring-1 focus:ring-[#1264A3] outline-none resize-y font-mono placeholder-[#ABABAD]"
+            className="w-full px-3 py-2.5 text-[13px] leading-[1.6] text-[var(--hm-text)] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] focus:ring-1 focus:ring-[var(--hm-focus)] outline-none resize-y font-mono placeholder-[var(--hm-muted-light)]"
             placeholder="Enter the agent's system prompt..."
           />
-          <p className="text-[11px] text-[#ABABAD] mt-1">
+          <p className="text-[11px] text-[var(--hm-muted-light)] mt-1">
             {systemPrompt.length} characters
           </p>
         </div>
 
         {/* Tools (read-only for now, placeholder) */}
         <div>
-          <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+          <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
             Tools
           </label>
-          <div className="border border-[#E0E0E0] rounded-md p-3">
+          <div className="border border-[var(--hm-border)] rounded-md p-3">
             {agent.tools && (agent.tools as string[]).length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {(agent.tools as string[]).map((tool) => (
                   <span
                     key={tool}
-                    className="text-[12px] px-2 py-1 rounded-md bg-[#F0F0F0] text-[#616061] font-mono"
+                    className="text-[12px] px-2 py-1 rounded-md bg-[var(--hm-surface)] text-[var(--hm-muted)] font-mono"
                   >
                     {tool}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-[12px] text-[#ABABAD]">
+              <p className="text-[12px] text-[var(--hm-muted-light)]">
                 No tools configured. Tools can be added in Phase 6 (Execution Agents).
               </p>
             )}

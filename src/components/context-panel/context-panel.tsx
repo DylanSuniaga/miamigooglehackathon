@@ -44,15 +44,15 @@ export function ContextPanel({ channelId, onClose }: ContextPanelProps) {
   const totalItems = decisions.length + actions.length + assumptions.length;
 
   return (
-    <div className="w-[320px] border-l border-[#E0E0E0] bg-white flex flex-col shrink-0">
+    <div className="w-[320px] border-l border-[var(--hm-border)] bg-[var(--hm-bg)] flex flex-col shrink-0">
       {/* Header */}
-      <div className="flex items-center justify-between h-[49px] px-4 border-b border-[#E0E0E0] shrink-0">
-        <h3 className="text-sm font-bold text-[#1D1C1D]">Context</h3>
+      <div className="flex items-center justify-between h-[49px] px-4 border-b border-[var(--hm-border)] shrink-0">
+        <h3 className="text-sm font-bold text-[var(--hm-text)]">Context</h3>
         <div className="flex items-center gap-2">
           <button
             onClick={triggerExtraction}
             disabled={extracting}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[#F8F8F8] text-[#1D1C1D] hover:bg-[#ECECEC] disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[var(--hm-surface-light)] text-[var(--hm-text)] hover:bg-[var(--hm-surface-hover)] disabled:opacity-50 transition-colors"
           >
             {extracting ? (
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -63,7 +63,7 @@ export function ContextPanel({ channelId, onClose }: ContextPanelProps) {
           </button>
           <button
             onClick={onClose}
-            className="text-[#616061] hover:text-[#1D1C1D]"
+            className="text-[var(--hm-muted)] hover:text-[var(--hm-text)]"
           >
             <X className="h-4 w-4" />
           </button>
@@ -72,14 +72,14 @@ export function ContextPanel({ channelId, onClose }: ContextPanelProps) {
 
       {/* Summary line */}
       {totalItems > 0 && (
-        <div className="px-4 py-2 text-xs text-[#616061] border-b border-[#E0E0E0]">
+        <div className="px-4 py-2 text-xs text-[var(--hm-muted)] border-b border-[var(--hm-border)]">
           {decisions.length} decision{decisions.length !== 1 ? "s" : ""} · {actions.length} action{actions.length !== 1 ? "s" : ""} · {assumptions.length} assumption{assumptions.length !== 1 ? "s" : ""}
         </div>
       )}
 
       {loading ? (
         <div className="flex items-center justify-center flex-1">
-          <Loader2 className="h-5 w-5 animate-spin text-[#616061]" />
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--hm-muted)]" />
         </div>
       ) : (
         <Tabs

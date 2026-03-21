@@ -31,7 +31,7 @@ export function Dialog({ open, onClose, children }: DialogProps) {
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className="w-full max-w-[480px] rounded-xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full max-w-[480px] rounded-xl bg-[var(--hm-bg)] shadow-xl animate-in fade-in zoom-in-95 duration-150">
         {children}
       </div>
     </div>
@@ -46,10 +46,10 @@ interface DialogHeaderProps {
 export function DialogHeader({ children, onClose }: DialogHeaderProps) {
   return (
     <div className="flex items-center justify-between px-6 pt-5 pb-1">
-      <h2 className="text-[18px] font-bold text-[#1D1C1D]">{children}</h2>
+      <h2 className="text-[18px] font-bold text-[var(--hm-text)]">{children}</h2>
       <button
         onClick={onClose}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--hm-muted)] hover:bg-[var(--hm-surface)] hover:text-[var(--hm-text)]"
       >
         <X className="h-5 w-5" />
       </button>

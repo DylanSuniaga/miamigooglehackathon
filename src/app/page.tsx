@@ -136,7 +136,7 @@ export default function Home() {
   if (workspaceLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <span className="text-[#616061] text-sm">Loading...</span>
+        <span className="text-[var(--hm-muted)] text-sm">Loading...</span>
       </div>
     );
   }
