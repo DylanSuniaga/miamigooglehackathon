@@ -11,9 +11,12 @@ const getSandboxPrompt = (isServer: boolean) => `
 ## Code Execution
 When your task requires producing a visualization, chart, graph, animation, data output, or any executable result:
 1. WRITE the actual runnable code — do NOT describe it only in prose.
-2. Wrap it: <<<SANDBOX:{"language":"python","code":"<full code>","title":"<title>"${isServer ? ',"mode":"server"' : ''}}>>>
+2. Wrap it inside a designated XML tag:
+<sandbox language="python" title="<title>"${isServer ? ' mode="server"' : ''}>
+<full runnable code>
+</sandbox>
 3. ${isServer ? "You are running in a persistent Ubuntu server sandbox with 'pip install' and full filesystem access." : "Python + matplotlib preferred. For interactive web content use HTML/JS."}
-4. For multi-step tasks produce multiple <<<SANDBOX:{}>>> blocks.
+4. For multi-step tasks produce multiple <sandbox> blocks.
 `;
 
 const DELEGATION_SYSTEM_PROMPT = `

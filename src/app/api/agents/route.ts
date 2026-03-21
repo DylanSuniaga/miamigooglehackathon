@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       agent_type: agent_type ?? "thinking",
       description: description ?? null,
       system_prompt,
-      tools: tools ?? [],
+      tools: tools ?? ["run_code", "read_docs", "query_channel"],
     })
     .select()
     .single();

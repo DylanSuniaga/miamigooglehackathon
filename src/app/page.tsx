@@ -160,7 +160,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full w-full overflow-hidden bg-white relative">
       <IconRail activeView={activeView} onViewChange={setActiveView} />
 
       {activeView === "messages" ? (

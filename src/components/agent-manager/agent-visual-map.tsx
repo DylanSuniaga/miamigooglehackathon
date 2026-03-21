@@ -11,8 +11,11 @@ import {
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Bot, FileText, Settings, Cpu } from "lucide-react";
+import { Bot, FileText, Settings, Cpu, Wrench, Users } from "lucide-react";
 import type { Agent, AgentContextDocument } from "@/lib/types";
+
+// Import tool list to map IDs to readable names
+import { ALL_TOOLS } from "./tools-panel";
 
 // --- Custom Nodes ---
 
@@ -37,6 +40,7 @@ function AgentNodeComponent({ data }: { data: any }) {
         </div>
       </div>
       <Handle type="source" position={Position.Right} className="w-2 h-2 !bg-[#616061]" />
+      <Handle type="source" position={Position.Bottom} id="bottom" className="w-2 h-2 !bg-[#616061]" />
     </div>
   );
 }
@@ -97,10 +101,39 @@ function ConfigNodeComponent({ data }: { data: any }) {
 }
 const ConfigNode = memo(ConfigNodeComponent);
 
+function ToolNodeComponent({ data }: { data: any }) {
+  return (
+    <div className="px-3 py-1.5 bg-white rounded shadow-sm border border-[#1264A3] min-w-[120px] flex items-center justify-center gap-2">
+      <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-[#616061]" />
+      <Wrench className="w-3.5 h-3.5 text-[#1264A3]" />
+      <span className="font-medium text-[11px] text-[#1264A3]">{data.name}</span>
+    </div>
+  );
+}
+const ToolNode = memo(ToolNodeComponent);
+
+function SubagentNodeComponent({ data }: { data: any }) {
+  return (
+    <div
+      className="px-3 py-1.5 bg-[#F8F8F8] rounded shadow-sm border min-w-[120px] flex items-center justify-between gap-3 opacity-90"
+      style={{ borderColor: data.color || "#1D1C1D" }}
+    >
+      <Handle type="target" position={Position.Left} className="w-2 h-2 !bg-[#616061]" />
+      <div className="flex items-center gap-1.5">
+        <span className="text-sm">{data.emoji}</span>
+        <span className="font-medium text-[12px] text-[#1D1C1D]">{data.name}</span>
+      </div>
+    </div>
+  );
+}
+const SubagentNode = memo(SubagentNodeComponent);
+
 const customNodeTypes = {
   agentNode: AgentNode,
   contextNode: ContextNode,
   configNode: ConfigNode,
+  toolNode: ToolNode,
+  subagentNode: SubagentNode,
 };
 
 // --- Main Map Component ---
@@ -108,10 +141,11 @@ const customNodeTypes = {
 interface AgentVisualMapProps {
   agent: Agent;
   contextDocs: AgentContextDocument[];
+  allAgents: Agent[];
   onNodeDoubleClick?: (type: "agent" | "config" | "context", id?: string) => void;
 }
 
-export function AgentVisualMap({ agent, contextDocs, onNodeDoubleClick }: AgentVisualMapProps) {
+export function AgentVisualMap({ agent, contextDocs, allAgents, onNodeDoubleClick }: AgentVisualMapProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
@@ -124,7 +158,7 @@ export function AgentVisualMap({ agent, contextDocs, onNodeDoubleClick }: AgentV
     newNodes.push({
       id: "agent-center",
       type: "agentNode",
-      position: { x: 350, y: Math.max(0, (contextDocs.length * 60) / 2) },
+      position: { x: 350, y: Math.max(0, (contextDocs.length * 70) / 2) },
       data: {
         name: agent.display_name,
         emoji: agent.avatar_emoji,
@@ -133,11 +167,11 @@ export function AgentVisualMap({ agent, contextDocs, onNodeDoubleClick }: AgentV
       },
     });
 
-    // 2. Config Node (Right side)
+    // 2. Config Node (Right side top)
     newNodes.push({
       id: "config-node",
       type: "configNode",
-      position: { x: 650, y: Math.max(0, (contextDocs.length * 60) / 2) + 10 },
+      position: { x: 650, y: Math.max(0, (contextDocs.length * 70) / 2) - 40 },
       data: {
         model: agent.model,
         temperature: agent.temperature,
@@ -176,9 +210,66 @@ export function AgentVisualMap({ agent, contextDocs, onNodeDoubleClick }: AgentV
       });
     });
 
+    // 4. Tool Nodes (Bottom side)
+    const activeTools = Array.isArray(agent.tools) ? agent.tools : [];
+    const toolMap = new Map(ALL_TOOLS.map(t => [t.id, t.label]));
+    
+    activeTools.forEach((toolId, idx) => {
+      const nodeId = `tool-${toolId}`;
+      const name = toolMap.get(toolId as string) || toolId;
+      // Spread out horizontally below the agent
+      const startX = 350 - (activeTools.length * 140) / 2 + 70;
+      
+      newNodes.push({
+        id: nodeId,
+        type: "toolNode",
+        position: { x: startX + idx * 140, y: Math.max(0, (contextDocs.length * 70) / 2) + 120 },
+        data: { name },
+      });
+
+      newEdges.push({
+        id: `edge-${nodeId}`,
+        source: "agent-center",
+        sourceHandle: "bottom",
+        target: nodeId,
+        animated: true,
+        style: { stroke: "#1264A3", strokeWidth: 1.5, opacity: 0.6 },
+      });
+    });
+
+    // 5. Subagents (Right side bottom) - only if delegation tool is enabled
+    if (activeTools.includes("delegate")) {
+      const peers = allAgents.filter(a => a.id !== agent.id && a.is_active);
+      peers.forEach((peer, idx) => {
+        const nodeId = `peer-${peer.id}`;
+        
+        newNodes.push({
+          id: nodeId,
+          type: "subagentNode",
+          position: { x: 650, y: Math.max(0, (contextDocs.length * 70) / 2) + 60 + idx * 50 },
+          data: {
+            name: peer.display_name,
+            emoji: peer.avatar_emoji,
+            color: peer.color,
+          },
+        });
+
+        newEdges.push({
+          id: `edge-${nodeId}`,
+          source: "agent-center",
+          target: nodeId,
+          animated: true,
+          style: { stroke: "#ABABAD", strokeWidth: 1.5 },
+          label: "can delegate to",
+          labelStyle: { fill: "#616061", fontSize: 10, fontWeight: 500 },
+          labelBgStyle: { fill: "#F8F8F8", fillOpacity: 0.8 },
+        });
+      });
+    }
+
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [agent, contextDocs, setNodes, setEdges]);
+  }, [agent, contextDocs, allAgents, setNodes, setEdges]);
 
   const handleNodeDoubleClick = useCallback(
     (_: any, node: Node) => {

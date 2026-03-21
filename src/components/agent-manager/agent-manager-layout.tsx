@@ -71,7 +71,7 @@ export function AgentManagerLayout() {
   }
 
   return (
-    <div className="flex flex-1 min-w-0">
+    <div className="flex flex-1 min-w-0 h-full overflow-hidden relative">
       {/* Left: Agent List */}
       <AgentList
         agents={agents}
@@ -82,7 +82,7 @@ export function AgentManagerLayout() {
 
       {/* Center: Config Editor or Run History */}
       {selectedAgent ? (
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-white">
           {/* Tab bar */}
           <div className="flex items-center justify-between border-b border-[#E0E0E0] bg-white px-6">
             <div className="flex">
@@ -163,7 +163,8 @@ export function AgentManagerLayout() {
               <div className="flex-1 overflow-hidden">
                 <AgentVisualMap 
                   agent={selectedAgent} 
-                  contextDocs={contextDocs} 
+                  contextDocs={contextDocs}
+                  allAgents={agents} 
                   onNodeDoubleClick={() => {
                     setConfigViewMode("form");
                   }}

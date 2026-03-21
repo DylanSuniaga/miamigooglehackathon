@@ -18,10 +18,12 @@ const getSandboxPrompt = (isServer: boolean) => `
 When asked for a visualization, chart, graph, animation, data table, interactive demo, simulation, or any executable output:
 1. WRITE the actual code — do NOT only describe it in text.
 2. Wrap it like this:
-<<<SANDBOX:{"language":"python","code":"<full runnable code>","title":"<short descriptive title>"${isServer ? ',"mode":"server"' : ''}}>>>
+<sandbox language="python" title="<short descriptive title>"${isServer ? ' mode="server"' : ''}>
+<full runnable code>
+</sandbox>
 3. ${isServer ? "You are running in a persistent Ubuntu server sandbox with 'pip install' and full filesystem access." : "Python + matplotlib is preferred for charts/plots. Use numpy for math. Use pandas for data."}
 4. After the sandbox block, you may add brief explanation text.
-5. For multi-step tasks: produce a <<<SANDBOX:{}>>> block for each executable component.
+5. For multi-step tasks: produce a <sandbox> block for each executable component.
 `;
 
 // Delegation prompt — appended when agent has delegate tool enabled
@@ -116,6 +118,11 @@ export async function POST(req: NextRequest) {
   if (enabledTools.includes("delegate")) {
     promptParts.push(DELEGATION_SYSTEM_PROMPT.trim());
   }
+
+  // Unconditional build capabilities
+  promptParts.push(
+    `## Code & Workspace Tooling\nYou can ALWAYS ask the '@build' agent to write/execute visual code or create scaffolding and subagents for you.\nUse this syntax to delegate to it:\n<<<DELEGATE:{"to":"build","task":"<what you need>"}>>>`
+  );
 
   const effectiveSystemPrompt = promptParts.join("\n\n---\n\n");
 
