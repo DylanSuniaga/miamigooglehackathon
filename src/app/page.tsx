@@ -9,22 +9,19 @@ import { MessageInput } from "@/components/chat/message-input";
 import { CreateChannelDialog } from "@/components/channel/create-channel-dialog";
 import { AgentManagerLayout } from "@/components/agent-manager/agent-manager-layout";
 import { CalendarView } from "@/components/calendar/calendar-view";
+import { PeopleView } from "@/components/people/people-view";
 import { AgentLauncherModal } from "@/components/agent-manager/agent-launcher-modal";
 import { ContextPanel } from "@/components/context-panel/context-panel";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useChannelMessages } from "@/hooks/use-channel-messages";
 import { useAgentStreaming, type StreamingMessage as StreamingMessageType } from "@/hooks/use-agent-streaming";
 import { useAgentRuns } from "@/hooks/use-agent-runs";
-
-const MOCK_DM_USERS = [
-  { id: "d1", name: "Blake Anderson", avatarColor: "#7F77DD", you: true },
-  { id: "d2", name: "Benjamin Chen", avatarColor: "#1D9E75" },
-  { id: "d3", name: "Jay 10x", avatarColor: "#E8593C" },
-  { id: "d4", name: "Ben Wang", avatarColor: "#378ADD" },
-];
+import { useDemoUser } from "@/hooks/use-demo-user";
+import { DEMO_USERS } from "@/lib/demo-user";
 
 export default function Home() {
   const { channels, agents, loading: workspaceLoading, createChannel } = useWorkspace();
+  const { currentUser } = useDemoUser();
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [pendingAgents, setPendingAgents] = useState<StreamingMessageType[]>([]);
@@ -41,7 +38,7 @@ export default function Home() {
   }, [channels, activeChannelId]);
 
   const { messages, sendMessage, deleteMessage } =
-    useChannelMessages(activeChannelId);
+    useChannelMessages(activeChannelId, currentUser.id);
 
   const { streamingMessages } = useAgentStreaming(activeChannelId);
 
@@ -171,7 +168,12 @@ export default function Home() {
             activeChannelId={activeChannelId ?? ""}
             onChannelSelect={setActiveChannelId}
             onCreateChannel={() => setShowCreateChannel(true)}
-            dmUsers={MOCK_DM_USERS}
+            dmUsers={DEMO_USERS.map((u) => ({
+              id: u.id,
+              name: u.display_name,
+              avatarColor: u.color,
+              you: u.id === currentUser.id,
+            }))}
           />
           <div className="flex flex-1 flex-col min-w-0">
             <ChannelHeader
@@ -211,6 +213,8 @@ export default function Home() {
         </>
       ) : activeView === "agents" ? (
         <AgentManagerLayout />
+      ) : activeView === "people" ? (
+        <PeopleView />
       ) : (
         <CalendarView />
       )}

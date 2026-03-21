@@ -4,7 +4,6 @@ import {
   MessageSquare,
   Users,
   Bot,
-  Mail,
   Calendar,
   Sun,
   Moon,
@@ -16,13 +15,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type AppView = "messages" | "agents" | "calendar";
+export type AppView = "messages" | "agents" | "people" | "calendar";
 
 const NAV_ITEMS = [
   { icon: MessageSquare, label: "Messages", view: "messages" as AppView },
   { icon: Bot, label: "Agents", view: "agents" as AppView },
-  { icon: Users, label: "People" },
-  { icon: Mail, label: "Mail" },
+  { icon: Users, label: "People", view: "people" as AppView },
   { icon: Calendar, label: "Calendar", view: "calendar" as AppView },
 ];
 
