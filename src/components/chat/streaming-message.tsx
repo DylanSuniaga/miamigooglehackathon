@@ -6,6 +6,7 @@ interface StreamingMessageProps {
   agentColor: string;
   model: string;
   content: string;
+  status?: string;
 }
 
 function TypingDots({ color }: { color: string }) {
@@ -32,6 +33,7 @@ export function StreamingMessage({
   agentColor,
   model,
   content,
+  status,
 }: StreamingMessageProps) {
   const modelShort = model.includes(":") ? model.split(":")[1] : model;
   const hasContent = content.trim().length > 0;
@@ -60,7 +62,13 @@ export function StreamingMessage({
             </span>
           )}
           <span className="text-[12px] text-[var(--hm-muted-light)]">
-            {hasContent ? "typing..." : "thinking..."}
+            {hasContent
+              ? "typing..."
+              : status === "searching"
+              ? "searching the web..."
+              : status === "generating_image"
+              ? "generating image..."
+              : "thinking..."}
           </span>
         </div>
         <div className="mt-0.5 text-[15px] leading-[1.5] text-[var(--hm-text)]">
@@ -139,4 +147,17 @@ const markdownComponents = {
       {children}
     </a>
   ),
+  img: ({ alt, src, ...props }: React.ComponentProps<"img">) => {
+    const srcStr = typeof src === "string" ? src : undefined;
+    return (
+      <a href={srcStr} target="_blank" rel="noopener noreferrer">
+        <img
+          alt={alt}
+          src={srcStr}
+          className="max-w-md rounded-lg border border-[var(--hm-border)] my-2 cursor-pointer hover:shadow-md transition-shadow"
+          {...props}
+        />
+      </a>
+    );
+  },
 };

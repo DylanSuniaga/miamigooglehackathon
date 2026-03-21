@@ -5,6 +5,8 @@ import { MessageBubble } from "./message-bubble";
 import { StreamingMessage } from "./streaming-message";
 import type { StreamingMessage as StreamingMessageType } from "@/hooks/use-agent-streaming";
 
+import type { Attachment } from "@/lib/types";
+
 interface Message {
   id: string;
   senderName: string;
@@ -15,6 +17,7 @@ interface Message {
   model?: string;
   content: string;
   timestamp: string;
+  attachments?: Attachment[];
 }
 
 interface AgentInfo {
@@ -73,6 +76,7 @@ export function MessageList({
             agentColor={sm.agentColor}
             model={sm.model}
             content={sm.content}
+            status={sm.status}
           />
         ))}
         <div ref={bottomRef} />
