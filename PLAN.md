@@ -120,39 +120,38 @@ Five default thinking agents ship with every workspace. Each uses a different fr
 ## Project Structure
 
 ```text
-hivemind/
+hivemind/src/
 ├── app/
-│   ├── layout.tsx                    # Root layout with Supabase provider
-│   ├── page.tsx                      # Landing / redirect to workspace
-│   ├── login/page.tsx                # GitHub OAuth login
-│   ├── workspace/[workspaceId]/
-│   │   ├── layout.tsx                # Sidebar + main
-│   │   └── channel/[channelId]/page.tsx  # Chat + right panel
-│   └── api/
-│       ├── chat/route.ts             # Send message + invoke thinking agent
+│   ├── layout.tsx                    # ✅ Root layout with TooltipProvider
+│   ├── page.tsx                      # ✅ Main workspace view (real Supabase data)
+│   ├── globals.css                   # ✅ Tailwind 4 + shadcn theme vars
+│   └── api/                          # (Phase 2+)
 │       ├── agent/invoke/route.ts     # Invoke a thinking agent
 │       ├── agent/launch/route.ts     # Launch execution agent
 │       ├── context/extract/route.ts  # Extract decisions/actions/assumptions
-│       ├── context/search/route.ts   # Semantic search over context
-│       └── webhook/agent-complete/   # Callback when agent finishes
+│       └── context/search/route.ts   # Semantic search over context
 ├── components/
-│   ├── layout/        # Sidebar, channel header, workspace provider
-│   ├── chat/          # Message list, bubble, input, streaming, system msgs
-│   ├── context-panel/ # Decisions, actions, assumptions, health widget
-│   ├── agents-panel/  # Thinking agents list, execution agent card, launcher
-│   └── agent-manager/ # Agent config editor, context map, hierarchy view
+│   ├── layout/                       # ✅ icon-rail, channel-sidebar, channel-header
+│   ├── chat/                         # ✅ message-list, message-bubble, message-input
+│   ├── channel/                      # ✅ create-channel-dialog
+│   ├── ui/                           # ✅ shadcn: avatar, badge, button, dialog, input, scroll-area, separator, tabs, textarea, tooltip
+│   ├── context-panel/                # (Phase 3)
+│   ├── agents-panel/                 # (Phase 2)
+│   └── agent-manager/                # (Phase 5)
 ├── hooks/
-│   ├── use-channel-messages.ts   # Realtime subscription
-│   ├── use-agent-runs.ts         # Execution agent status
-│   ├── use-context.ts            # Decisions, actions, assumptions
-│   └── use-workspace.ts          # Workspace + channels
+│   ├── use-channel-messages.ts       # ✅ Realtime subscription (INSERT + DELETE)
+│   └── use-workspace.ts              # ✅ Workspace + channels + channel CRUD
+├── utils/
+│   └── supabase/                     # ✅ client.ts, server.ts, middleware.ts
 ├── lib/
-│   ├── supabase/      # client.ts, server.ts, middleware.ts
-│   ├── openrouter.ts  # OpenRouter provider config
-│   └── agents/        # prompts.ts, tools.ts, context-extractor.ts
+│   ├── demo-user.ts                  # 🔧 Needed (imported but not yet created)
+│   ├── types.ts                      # 🔧 Needed (imported but not yet created)
+│   ├── openrouter.ts                 # (Phase 2)
+│   └── agents/                       # (Phase 2+)
+├── middleware.ts                      # ✅ Supabase session refresh
 └── supabase/
-    ├── migrations/    # Schema, extensions, functions, seed
-    └── functions/     # process-agent-job, embed-message
+    ├── migrations/                   # Schema, extensions, functions, seed
+    └── functions/                    # process-agent-job, embed-message
 ```
 
 ---
@@ -161,20 +160,22 @@ hivemind/
 
 Each phase produces a working, demoable state. Build in sequence.
 
-### Phase 1: Foundation — Working Chat & Project Scaffold
-**Goal:** Empty Next.js app running locally, static UI shell, and real DB w/ synced messages.
+### Phase 1: Foundation — Working Chat & Project Scaffold ✅ MOSTLY COMPLETE
+**Goal:** Next.js app running locally, UI shell, real DB with synced messages.
 
-- `npx create-next-app@latest hivemind --typescript --tailwind --app` (or 16-canary)
-- Install core deps: `@supabase/supabase-js`, `@supabase/ssr`, `ai`, `@ai-sdk/openai`, `zod`, `react-markdown`, `date-fns`
-- Set up shadcn/ui: `button, input, textarea, dialog, tabs, badge, scroll-area, avatar, dropdown-menu, separator, tooltip`
-- Create `.env.local` template, `CLAUDE.md`, initialize git.
-- Build UI Shell: workspace layout with left sidebar (channels), center (chat), right panel (empty).
-- Initialize Supabase (`npx supabase init`), run schema migration, set up GitHub OAuth.
-- Fetch channels from Supabase, render in sidebar.
-- Message list with Supabase Realtime subscription (INSERT + UPDATE events on messages table).
-- Message input with basic send (INSERT into messages table).
-- Message bubble — distinct styling for user / agent / system sender types.
-✓ **Milestone:** Users can log in (or use demo user), see channels, send messages, and messages appear in real-time across multiple browser tabs.
+- ✅ `npx create-next-app@canary hivemind` — Next.js 16 canary w/ TypeScript, Tailwind 4, App Router
+- ✅ Core deps installed: `@supabase/supabase-js`, `@supabase/ssr`, `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, `zod`, `react-markdown`, `date-fns`, `lucide-react`
+- ✅ shadcn/ui (base-nova style): avatar, badge, button, dialog, input, scroll-area, separator, tabs, textarea, tooltip
+- ✅ `.env.local`, `CLAUDE.md`, git + GitHub repo connected
+- ✅ UI Shell: IconRail + ChannelSidebar + ChannelHeader + MessageList + MessageInput
+- ✅ Supabase wired: `utils/supabase/client.ts`, `server.ts`, `middleware.ts`
+- ✅ Channels fetched from Supabase, rendered in sidebar with real data
+- ✅ Realtime subscription on messages (INSERT + DELETE via `use-channel-messages.ts`)
+- ✅ Message send (INSERT into messages) with Enter key + send button
+- ✅ Message bubble with user/agent/system styling, auto-scroll, empty state
+- ✅ Channel creation dialog (`create-channel-dialog.tsx`) with Supabase insert + member assignment
+- 🔧 `lib/types.ts` and `lib/demo-user.ts` — imported by hooks but not yet created in repo
+✓ **Milestone:** Users can see channels from DB, send messages, create channels — real-time sync across tabs.
 
 ### Phase 2: Thinking Agents — Core AI Experience
 **Goal:** @mention an agent in chat, it streams a response visible to all users.
@@ -551,6 +552,16 @@ export const DEMO_USER = {
   display_name: 'Demo User',
 };
 ```
+
+---
+
+## Testing Strategy
+
+*To ensure the core features remain functional:*
+1. **Agent Config Persistence:** Update an agent's configuration (prompt, model) in the UI, save it, and verify the changes persist across page reloads (testing Supabase write/read logic).
+2. **Context Document Assignment:** Add a new context document to an agent and ensure it properly links to the correct `agent_id` via the UI.
+3. **Model Limitations (Gemini):** Verify that the agent selection UI only permits Gemini models (since the system relies on a tier 3 `GEMINI_API_KEY`).
+4. **Agent Invocation:** Verify that typing `@agent_name` triggers the correct agent and it responds using the designated model setup.
 
 ---
 
