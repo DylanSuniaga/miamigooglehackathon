@@ -1,3 +1,5 @@
+![Hivemind](public/header.jpeg)
+
 # Hivemind
 
 **AI-Native Team Workspace + Agent Management Platform**
