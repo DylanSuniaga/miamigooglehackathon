@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useMemo } from "react";
-import { ArrowUp, Smile, Paperclip, AtSign, Type } from "lucide-react";
+import { ArrowUp, Smile, Paperclip, AtSign, Type, X, FileText } from "lucide-react";
 
 interface AgentInfo {
   handle: string;
@@ -11,7 +11,7 @@ interface AgentInfo {
 
 interface MessageInputProps {
   channelName: string;
-  onSend: (content: string) => void;
+  onSend: (content: string, files?: File[]) => void;
   agents?: AgentInfo[];
   onInvokeAgent?: (agentHandle: string) => void;
 }
@@ -26,9 +26,11 @@ export function MessageInput({
   const [showDropdown, setShowDropdown] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const hasContent = message.trim().length > 0;
+  const hasContent = message.trim().length > 0 || pendingFiles.length > 0;
 
   // Filter agents based on what's typed after @
   const filteredAgents = useMemo(() => {
@@ -80,11 +82,29 @@ export function MessageInput({
     textareaRef.current?.focus();
   }
 
+  function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setPendingFiles((prev) => [...prev, ...files]);
+    }
+    // Reset so the same file can be re-selected
+    e.target.value = "";
+  }
+
+  function removeFile(index: number) {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function isImageFile(file: File) {
+    return file.type.startsWith("image/");
+  }
+
   function handleSend() {
     if (!hasContent) return;
     const content = message.trim();
-    onSend(content);
+    onSend(content, pendingFiles.length > 0 ? pendingFiles : undefined);
     setMessage("");
+    setPendingFiles([]);
     setShowDropdown(false);
 
     // Detect @mentions and invoke agents
@@ -134,8 +154,24 @@ export function MessageInput({
     }
   }
 
+  function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
   return (
     <div className="bg-white px-5 py-3">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,.doc,.docx,.txt"
+        className="hidden"
+        onChange={handleFilesSelected}
+      />
+
       {/* Input area */}
       <div className="relative rounded-lg border border-[#E0E0E0] focus-within:border-[#1264A3] focus-within:shadow-[0_0_0_1px_#1264A3]">
         {/* Agent mention dropdown */}
@@ -165,6 +201,44 @@ export function MessageInput({
           </div>
         )}
 
+        {/* File preview strip */}
+        {pendingFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-3 pt-2">
+            {pendingFiles.map((file, i) => (
+              <div
+                key={`${file.name}-${i}`}
+                className="relative group flex items-center gap-2 rounded-md border border-[#E0E0E0] bg-[#F8F8F8] p-1.5 pr-7"
+              >
+                {isImageFile(file) ? (
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="h-10 w-10 rounded object-cover"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded bg-[#E0E0E0]">
+                    <FileText className="h-5 w-5 text-[#616061]" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="truncate text-[12px] font-medium text-[#1D1C1D] max-w-[120px]">
+                    {file.name}
+                  </div>
+                  <div className="text-[11px] text-[#616061]">
+                    {formatFileSize(file.size)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => removeFile(i)}
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#E0E0E0] text-[#616061] hover:bg-[#CCCCCC] hover:text-[#1D1C1D]"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <textarea
           ref={textareaRef}
           value={message}
@@ -178,7 +252,10 @@ export function MessageInput({
         {/* Toolbar row */}
         <div className="flex items-center justify-between px-3 py-1.5 border-t border-[#F0F0F0]">
           <div className="flex items-center gap-1.5">
-            <button className="flex h-7 w-7 items-center justify-center rounded text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]">
+            <button
+              className="flex h-7 w-7 items-center justify-center rounded text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Paperclip className="h-4 w-4" />
             </button>
             <button className="flex h-7 w-7 items-center justify-center rounded text-[#616061] hover:bg-[#F0F0F0] hover:text-[#1D1C1D]">
