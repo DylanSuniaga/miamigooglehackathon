@@ -8,6 +8,7 @@ import { MessageList } from "@/components/chat/message-list";
 import { MessageInput } from "@/components/chat/message-input";
 import { CreateChannelDialog } from "@/components/channel/create-channel-dialog";
 import { AgentManagerLayout } from "@/components/agent-manager/agent-manager-layout";
+import { CalendarView } from "@/components/calendar/calendar-view";
 import { ContextPanel } from "@/components/context-panel/context-panel";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useChannelMessages } from "@/hooks/use-channel-messages";
@@ -188,8 +189,10 @@ export default function Home() {
             onCreate={handleCreateChannel}
           />
         </>
-      ) : (
+      ) : activeView === "agents" ? (
         <AgentManagerLayout />
+      ) : (
+        <CalendarView />
       )}
     </div>
   );
