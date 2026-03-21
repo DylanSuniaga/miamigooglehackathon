@@ -102,7 +102,39 @@ create table context_assumptions (
   created_at timestamptz default now()
 );
 
+-- AGENT BRAIN TABLES
+create table agent_context_documents (
+  id uuid primary key default gen_random_uuid(),
+  agent_id uuid references agents(id) on delete cascade not null,
+  title text not null,
+  content text not null,
+  doc_type text not null default 'context' check (doc_type in ('context', 'prompt_fragment', 'reference', 'rules')),
+  is_active boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table agent_runs (
+  id uuid primary key default gen_random_uuid(),
+  agent_id uuid references agents(id) on delete cascade not null,
+  channel_id uuid references channels(id) on delete set null,
+  status text not null default 'pending' check (status in ('pending', 'running', 'completed', 'failed', 'cancelled')),
+  input_summary text,
+  output_summary text,
+  model_used text,
+  duration_ms int,
+  token_count_input int,
+  token_count_output int,
+  steps jsonb default '[]',
+  error text,
+  started_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz default now()
+);
+
 -- INDEXES
+create index idx_agent_context_docs_agent_active on agent_context_documents(agent_id, is_active);
+create index idx_agent_runs_agent_time on agent_runs(agent_id, created_at desc);
 create index idx_messages_channel_time on messages(channel_id, created_at);
 create index idx_messages_embedding on messages using hnsw (embedding vector_cosine_ops);
 create index idx_channel_members_channel on channel_members(channel_id);
@@ -113,6 +145,7 @@ alter publication supabase_realtime add table channels;
 alter publication supabase_realtime add table context_decisions;
 alter publication supabase_realtime add table context_actions;
 alter publication supabase_realtime add table context_assumptions;
+alter publication supabase_realtime add table agent_runs;
 
 -- Full replica identity so DELETE payloads include row data
 alter table messages replica identity full;
@@ -120,6 +153,7 @@ alter table channels replica identity full;
 alter table context_decisions replica identity full;
 alter table context_actions replica identity full;
 alter table context_assumptions replica identity full;
+alter table agent_runs replica identity full;
 
 -- Permissive RLS (no auth for now — demo mode)
 alter table workspaces enable row level security;
@@ -141,6 +175,11 @@ create policy "Allow all" on channel_members for all using (true) with check (tr
 create policy "Allow all" on context_decisions for all using (true) with check (true);
 create policy "Allow all" on context_actions for all using (true) with check (true);
 create policy "Allow all" on context_assumptions for all using (true) with check (true);
+create policy "Allow all" on agent_context_documents for all using (true) with check (true);
+create policy "Allow all" on agent_runs for all using (true) with check (true);
+
+alter table agent_context_documents enable row level security;
+alter table agent_runs enable row level security;
 
 -- SEMANTIC SEARCH
 create or replace function match_messages(
@@ -196,13 +235,17 @@ insert into agents (id, workspace_id, handle, display_name, description, agent_t
 
   ('00000000-0000-0000-0000-000000000103', '00000000-0000-0000-0000-000000000001',
    'researcher', 'Researcher', 'Market research and fact validation', 'thinking',
-   'You are Researcher, the team''s fact-checker and context-gatherer. Provide grounded analysis with specific data points. Use your web search tool to find current information. Always cite sources. Structure: Key Finding → Supporting Evidence → Implication for the Team. Never fabricate data.',
+   'You are Researcher, the team''s fact-checker and context-gatherer. Provide grounded analysis with specific data points. Use your web search tool to find current information. Always cite sources with markdown links. Structure: Key Finding → Supporting Evidence → Implication for the Team. Never fabricate data.',
    'google:gemini-2.5-pro', 0.3, '📊', '#378ADD'),
 
   ('00000000-0000-0000-0000-000000000104', '00000000-0000-0000-0000-000000000001',
    'context', 'Context', 'Team context management and synthesis', 'system',
    'You are Context, the team''s memory engine. You extract: 1) DECISIONS with rationale. 2) ACTION ITEMS with owners and due dates. 3) ASSUMPTIONS flagged as untested/validated/challenged. Be concise — use bullet points and status indicators.',
    'google:gemini-2.5-flash', 0.2, '🧭', '#BA7517');
+
+-- Give @researcher the webSearch tool
+update agents set tools = '["webSearch"]'::jsonb
+where handle = 'researcher' and workspace_id = '00000000-0000-0000-0000-000000000001';
 
 -- Add agents and demo user to channels
 insert into channel_members (channel_id, member_type, member_id) values
