@@ -88,10 +88,10 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="relative bg-white rounded-xl shadow-xl w-[560px] max-h-[85vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-[#E0E0E0]">
-          <h2 className="text-[17px] font-bold text-[#1D1C1D]">Create Agent</h2>
-          <p className="text-[13px] text-[#616061] mt-0.5">
+      <div className="relative bg-[var(--hm-bg)] rounded-xl shadow-xl w-[560px] max-h-[85vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b border-[var(--hm-border)]">
+          <h2 className="text-[17px] font-bold text-[var(--hm-text)]">Create Agent</h2>
+          <p className="text-[13px] text-[var(--hm-muted)] mt-0.5">
             Ship a new agent in 30 seconds.
           </p>
         </div>
@@ -101,16 +101,16 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
           <div className="flex gap-4">
             {/* Emoji picker */}
             <div>
-              <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+              <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
                 Emoji
               </label>
-              <div className="grid grid-cols-5 gap-1 p-2 border border-[#E0E0E0] rounded-md">
+              <div className="grid grid-cols-5 gap-1 p-2 border border-[var(--hm-border)] rounded-md">
                 {EMOJI_OPTIONS.map((e) => (
                   <button
                     key={e}
                     onClick={() => setEmoji(e)}
                     className={`h-8 w-8 flex items-center justify-center rounded text-lg transition-colors ${
-                      emoji === e ? "bg-[#E8E8E8]" : "hover:bg-[#F0F0F0]"
+                      emoji === e ? "bg-[var(--hm-surface-hover)]" : "hover:bg-[var(--hm-surface)]"
                     }`}
                   >
                     {e}
@@ -122,7 +122,7 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
             {/* Name + Handle */}
             <div className="flex-1 space-y-3">
               <div>
-                <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+                <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
                   Display Name
                 </label>
                 <input
@@ -133,21 +133,21 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
                     if (!handle) setHandle(generateHandle(e.target.value));
                   }}
                   placeholder="e.g. Code Reviewer"
-                  className="w-full px-3 py-2 text-[14px] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] outline-none text-[#1D1C1D] placeholder-[#ABABAD]"
+                  className="w-full px-3 py-2 text-[14px] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] outline-none text-[var(--hm-text)] placeholder-[var(--hm-muted-light)]"
                 />
               </div>
               <div>
-                <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+                <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
                   Handle
                 </label>
                 <div className="flex items-center">
-                  <span className="text-[14px] text-[#ABABAD] mr-1">@</span>
+                  <span className="text-[14px] text-[var(--hm-muted-light)] mr-1">@</span>
                   <input
                     type="text"
                     value={handle}
                     onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
                     placeholder="code-reviewer"
-                    className="flex-1 px-3 py-2 text-[14px] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] outline-none text-[#1D1C1D] font-mono placeholder-[#ABABAD]"
+                    className="flex-1 px-3 py-2 text-[14px] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] outline-none text-[var(--hm-text)] font-mono placeholder-[var(--hm-muted-light)]"
                   />
                 </div>
               </div>
@@ -156,26 +156,26 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
 
           {/* Description */}
           <div>
-            <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
-              Description <span className="font-normal text-[#ABABAD]">(optional)</span>
+            <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
+              Description <span className="font-normal text-[var(--hm-muted-light)]">(optional)</span>
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of what this agent does"
-              className="w-full px-3 py-2 text-[14px] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] outline-none text-[#1D1C1D] placeholder-[#ABABAD]"
+              className="w-full px-3 py-2 text-[14px] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] outline-none text-[var(--hm-text)] placeholder-[var(--hm-muted-light)]"
             />
           </div>
 
           {/* Type + Model + Temp */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">Type</label>
+              <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">Type</label>
               <select
                 value={agentType}
                 onChange={(e) => setAgentType(e.target.value as typeof agentType)}
-                className="w-full px-3 py-2 text-[14px] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] outline-none bg-white text-[#1D1C1D]"
+                className="w-full px-3 py-2 text-[14px] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] outline-none bg-[var(--hm-bg)] text-[var(--hm-text)]"
               >
                 <option value="thinking">Thinking</option>
                 <option value="execution">Execution</option>
@@ -183,11 +183,11 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
               </select>
             </div>
             <div>
-              <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">Model</label>
+              <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">Model</label>
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value)}
-                className="w-full px-3 py-2 text-[14px] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] outline-none bg-white text-[#1D1C1D]"
+                className="w-full px-3 py-2 text-[14px] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] outline-none bg-[var(--hm-bg)] text-[var(--hm-text)]"
               >
                 {AVAILABLE_MODELS.map((m) => (
                   <option key={m.value} value={m.value}>{m.label}</option>
@@ -195,7 +195,7 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
               </select>
             </div>
             <div>
-              <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+              <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
                 Temp: {temperature.toFixed(1)}
               </label>
               <input
@@ -205,21 +205,21 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
                 step="0.1"
                 value={temperature}
                 onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                className="w-full mt-2 accent-[#1D1C1D]"
+                className="w-full mt-2 accent-[var(--hm-text)]"
               />
             </div>
           </div>
 
           {/* Color */}
           <div>
-            <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">Color</label>
+            <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">Color</label>
             <div className="flex gap-2">
               {AGENT_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => setColor(c)}
                   className={`h-6 w-6 rounded-full border-2 transition-transform ${
-                    color === c ? "border-[#1D1C1D] scale-110" : "border-transparent hover:scale-105"
+                    color === c ? "border-[var(--hm-text)] scale-110" : "border-transparent hover:scale-105"
                   }`}
                   style={{ backgroundColor: c }}
                 />
@@ -229,7 +229,7 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
 
           {/* System Prompt */}
           <div>
-            <label className="block text-[13px] font-semibold text-[#1D1C1D] mb-1.5">
+            <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
               System Prompt
             </label>
             <textarea
@@ -237,23 +237,23 @@ export function CreateAgentDialog({ open, onClose, onCreate }: CreateAgentDialog
               onChange={(e) => setSystemPrompt(e.target.value)}
               placeholder="Enter the agent's system prompt — define its personality, role, and behavior..."
               rows={6}
-              className="w-full px-3 py-2.5 text-[13px] leading-[1.6] border border-[#E0E0E0] rounded-md focus:border-[#1264A3] outline-none resize-y font-mono text-[#1D1C1D] placeholder-[#ABABAD]"
+              className="w-full px-3 py-2.5 text-[13px] leading-[1.6] border border-[var(--hm-border)] rounded-md focus:border-[var(--hm-focus)] outline-none resize-y font-mono text-[var(--hm-text)] placeholder-[var(--hm-muted-light)]"
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-[#E0E0E0]">
+        <div className="flex justify-end gap-2 px-6 py-4 border-t border-[var(--hm-border)]">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-[14px] text-[#616061] rounded-md hover:bg-[#F0F0F0] transition-colors"
+            className="px-4 py-2 text-[14px] text-[var(--hm-muted)] rounded-md hover:bg-[var(--hm-surface)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={!displayName.trim() || !systemPrompt.trim() || creating}
-            className="px-5 py-2 text-[14px] font-medium rounded-md bg-[#1D1C1D] text-white hover:bg-[#333] disabled:bg-[#E0E0E0] disabled:text-[#ABABAD] transition-colors"
+            className="px-5 py-2 text-[14px] font-medium rounded-md bg-[var(--hm-text)] text-white hover:bg-[#333] disabled:bg-[var(--hm-border)] disabled:text-[var(--hm-muted-light)] transition-colors"
           >
             {creating ? "Creating..." : "Create Agent"}
           </button>

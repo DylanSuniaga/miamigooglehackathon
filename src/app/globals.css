@@ -49,6 +49,21 @@
 }
 
 :root {
+  /* Hivemind app tokens */
+  --hm-text: #1D1C1D;
+  --hm-muted: #616061;
+  --hm-muted-light: #ABABAD;
+  --hm-border: #E0E0E0;
+  --hm-surface: #F0F0F0;
+  --hm-surface-light: #F8F8F8;
+  --hm-surface-hover: #E8E8E8;
+  --hm-bg: #FFFFFF;
+  --hm-code-bg: #F5F5F5;
+  --hm-code-text: #E01E5A;
+  --hm-link: #1264A3;
+  --hm-focus: #1264A3;
+  --hm-icon-rail: #1D1C1D;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +99,21 @@
 }
 
 .dark {
+  /* Hivemind app tokens — dark */
+  --hm-text: #E0E0E0;
+  --hm-muted: #9E9E9E;
+  --hm-muted-light: #757575;
+  --hm-border: #333333;
+  --hm-surface: #1E1E1E;
+  --hm-surface-light: #252525;
+  --hm-surface-hover: #333333;
+  --hm-bg: #141414;
+  --hm-code-bg: #1E1E1E;
+  --hm-code-text: #F48FB1;
+  --hm-link: #64B5F6;
+  --hm-focus: #64B5F6;
+  --hm-icon-rail: #0D0D0D;
+
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);

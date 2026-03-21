@@ -14,7 +14,7 @@ export function AgentMentionPills({ agents, onMention }: AgentMentionPillsProps)
 
   return (
     <div className="flex items-center gap-1.5 px-5 pb-1">
-      <span className="text-[11px] text-[#ABABAD] mr-0.5">Agents:</span>
+      <span className="text-[11px] text-[var(--hm-muted-light)] mr-0.5">Agents:</span>
       {agents.map((agent) => (
         <button
           key={agent.handle}

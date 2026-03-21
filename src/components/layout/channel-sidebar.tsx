@@ -31,16 +31,16 @@ export function ChannelSidebar({
   dmUsers = [],
 }: ChannelSidebarProps) {
   return (
-    <div className="flex w-[240px] flex-col border-r border-[#E0E0E0] bg-[#F8F8F8]">
+    <div className="flex w-[240px] flex-col border-r border-[var(--hm-border)] bg-[var(--hm-surface)]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#E0E0E0]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--hm-border)]">
         <button className="flex items-center gap-1">
-          <h1 className="text-[15px] font-bold text-[#1D1C1D]">Messages</h1>
-          <ChevronDown className="h-3.5 w-3.5 text-[#1D1C1D]" />
+          <h1 className="text-[15px] font-bold text-[var(--hm-text)]">Messages</h1>
+          <ChevronDown className="h-3.5 w-3.5 text-[var(--hm-text)]" />
         </button>
         <button
           onClick={onCreateChannel}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-[#616061] hover:bg-[#E0E0E0]/50 hover:text-[#1D1C1D]"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--hm-muted)] hover:bg-[var(--hm-surface-hover)]/50 hover:text-[var(--hm-text)]"
         >
           <Plus className="h-4 w-4" />
         </button>
@@ -49,7 +49,7 @@ export function ChannelSidebar({
       <div className="flex-1 overflow-y-auto py-2">
         {/* Channels section */}
         <div className="px-3 py-1">
-          <button className="flex w-full items-center gap-1 text-[13px] font-semibold text-[#616061] hover:text-[#1D1C1D]">
+          <button className="flex w-full items-center gap-1 text-[13px] font-semibold text-[var(--hm-muted)] hover:text-[var(--hm-text)]">
             <ChevronDown className="h-3 w-3" />
             Channels
           </button>
@@ -61,14 +61,14 @@ export function ChannelSidebar({
             onClick={() => onChannelSelect(channel.id)}
             className={`flex w-full items-center gap-2 px-4 py-[5px] text-[14px] transition-colors ${
               activeChannelId === channel.id
-                ? "font-bold text-[#1D1C1D]"
-                : "text-[#1D1C1D] hover:bg-[#E0E0E0]/50"
+                ? "bg-[var(--hm-bg)] font-bold text-[var(--hm-text)]"
+                : "text-[var(--hm-text)] hover:bg-[var(--hm-surface-hover)]"
             }`}
           >
             <Hash className="h-4 w-4 shrink-0 opacity-70" />
             <span className="truncate">{channel.name}</span>
             {channel.unread > 0 && activeChannelId !== channel.id && (
-              <span className="ml-auto rounded-md bg-[#E0E0E0] px-[6px] py-[1px] text-[11px] font-semibold text-[#616061]">
+              <span className="ml-auto rounded-md bg-[var(--hm-border)] px-[6px] py-[1px] text-[11px] font-semibold text-[var(--hm-muted)]">
                 {channel.unread}
               </span>
             )}
@@ -79,7 +79,7 @@ export function ChannelSidebar({
         {dmUsers.length > 0 && (
           <>
             <div className="px-3 py-1 mt-3">
-              <button className="flex w-full items-center gap-1 text-[13px] font-semibold text-[#616061] hover:text-[#1D1C1D]">
+              <button className="flex w-full items-center gap-1 text-[13px] font-semibold text-[var(--hm-muted)] hover:text-[var(--hm-text)]">
                 <ChevronDown className="h-3 w-3" />
                 Direct Messages
               </button>
@@ -88,7 +88,7 @@ export function ChannelSidebar({
             {dmUsers.map((user) => (
               <button
                 key={user.id}
-                className="flex w-full items-center gap-2 px-4 py-[5px] text-[14px] text-[#1D1C1D] hover:bg-[#E0E0E0]/50"
+                className="flex w-full items-center gap-2 px-4 py-[5px] text-[14px] text-[var(--hm-text)] hover:bg-[var(--hm-surface-hover)]/50"
               >
                 <div
                   className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold"
@@ -99,7 +99,7 @@ export function ChannelSidebar({
                 <span className="truncate">
                   {user.name}
                   {user.you && (
-                    <span className="text-[#616061] text-[12px]"> (you)</span>
+                    <span className="text-[var(--hm-muted)] text-[12px]"> (you)</span>
                   )}
                 </span>
               </button>

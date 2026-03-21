@@ -22,12 +22,12 @@ export function AgentRunHistory({ runs, agentName }: AgentRunHistoryProps) {
 
   if (runs.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center py-12 text-center bg-white">
-        <Clock className="h-8 w-8 text-[#E0E0E0] mb-3" />
-        <p className="text-[14px] text-[#616061]">
+      <div className="flex-1 flex flex-col items-center justify-center py-12 text-center bg-[var(--hm-bg)]">
+        <Clock className="h-8 w-8 text-[var(--hm-border)] mb-3" />
+        <p className="text-[14px] text-[var(--hm-muted)]">
           No run history for {agentName}
         </p>
-        <p className="text-[12px] text-[#ABABAD] mt-1">
+        <p className="text-[12px] text-[var(--hm-muted-light)] mt-1">
           Runs will appear here when agents are invoked.
         </p>
       </div>
@@ -35,8 +35,8 @@ export function AgentRunHistory({ runs, agentName }: AgentRunHistoryProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white">
-      <div className="divide-y divide-[#F0F0F0]">
+    <div className="flex-1 overflow-y-auto bg-[var(--hm-bg)]">
+      <div className="divide-y divide-[var(--hm-surface)]">
         {runs.map((run) => {
           const isExpanded = expandedRun === run.id;
           const status = STATUS_STYLES[run.status];
@@ -48,12 +48,12 @@ export function AgentRunHistory({ runs, agentName }: AgentRunHistoryProps) {
             <div key={run.id}>
               <button
                 onClick={() => setExpandedRun(isExpanded ? null : run.id)}
-                className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-[#FAFAFA] transition-colors"
+                className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-[var(--hm-surface-light)] transition-colors"
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-3.5 w-3.5 text-[#ABABAD] shrink-0" />
+                  <ChevronDown className="h-3.5 w-3.5 text-[var(--hm-muted-light)] shrink-0" />
                 ) : (
-                  <ChevronRight className="h-3.5 w-3.5 text-[#ABABAD] shrink-0" />
+                  <ChevronRight className="h-3.5 w-3.5 text-[var(--hm-muted-light)] shrink-0" />
                 )}
 
                 {/* Status badge */}
@@ -62,24 +62,24 @@ export function AgentRunHistory({ runs, agentName }: AgentRunHistoryProps) {
                 </span>
 
                 {/* Input preview */}
-                <span className="text-[13px] text-[#1D1C1D] truncate flex-1">
+                <span className="text-[13px] text-[var(--hm-text)] truncate flex-1">
                   {run.input_summary ?? "No input recorded"}
                 </span>
 
                 {/* Meta info */}
                 <div className="flex items-center gap-3 shrink-0">
                   {run.model_used && (
-                    <span className="text-[11px] text-[#ABABAD] font-mono">
+                    <span className="text-[11px] text-[var(--hm-muted-light)] font-mono">
                       {run.model_used.split(":").pop()}
                     </span>
                   )}
                   {run.duration_ms && (
-                    <span className="flex items-center gap-1 text-[11px] text-[#ABABAD]">
+                    <span className="flex items-center gap-1 text-[11px] text-[var(--hm-muted-light)]">
                       <Zap className="h-3 w-3" />
                       {(run.duration_ms / 1000).toFixed(1)}s
                     </span>
                   )}
-                  <span className="text-[11px] text-[#ABABAD]">{timestamp}</span>
+                  <span className="text-[11px] text-[var(--hm-muted-light)]">{timestamp}</span>
                 </div>
               </button>
 
@@ -87,7 +87,7 @@ export function AgentRunHistory({ runs, agentName }: AgentRunHistoryProps) {
                 <div className="px-5 pb-4 ml-5 space-y-3">
                   {/* Tokens */}
                   {(run.token_count_input || run.token_count_output) && (
-                    <div className="flex gap-4 text-[12px] text-[#616061]">
+                    <div className="flex gap-4 text-[12px] text-[var(--hm-muted)]">
                       {run.token_count_input && (
                         <span>Input: {run.token_count_input.toLocaleString()} tokens</span>
                       )}
@@ -100,8 +100,8 @@ export function AgentRunHistory({ runs, agentName }: AgentRunHistoryProps) {
                   {/* Output */}
                   {run.output_summary && (
                     <div>
-                      <p className="text-[11px] font-semibold text-[#616061] mb-1">Output</p>
-                      <pre className="text-[12px] leading-[1.5] text-[#1D1C1D] font-mono whitespace-pre-wrap bg-[#F8F8F8] rounded-md p-3 max-h-[200px] overflow-y-auto border border-[#E0E0E0]">
+                      <p className="text-[11px] font-semibold text-[var(--hm-muted)] mb-1">Output</p>
+                      <pre className="text-[12px] leading-[1.5] text-[var(--hm-text)] font-mono whitespace-pre-wrap bg-[var(--hm-surface-light)] rounded-md p-3 max-h-[200px] overflow-y-auto border border-[var(--hm-border)]">
                         {run.output_summary}
                       </pre>
                     </div>
@@ -120,14 +120,14 @@ export function AgentRunHistory({ runs, agentName }: AgentRunHistoryProps) {
                   {/* Steps */}
                   {run.steps && (run.steps as Record<string, unknown>[]).length > 0 && (
                     <div>
-                      <p className="text-[11px] font-semibold text-[#616061] mb-1">
+                      <p className="text-[11px] font-semibold text-[var(--hm-muted)] mb-1">
                         Steps ({(run.steps as Record<string, unknown>[]).length})
                       </p>
                       <div className="space-y-1">
                         {(run.steps as Record<string, unknown>[]).map((step, i) => (
                           <div
                             key={i}
-                            className="text-[12px] text-[#616061] bg-[#F8F8F8] rounded px-2.5 py-1.5 font-mono"
+                            className="text-[12px] text-[var(--hm-muted)] bg-[var(--hm-surface-light)] rounded px-2.5 py-1.5 font-mono"
                           >
                             {JSON.stringify(step, null, 2)}
                           </div>

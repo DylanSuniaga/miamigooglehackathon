@@ -46,10 +46,10 @@ export function MessageList({
   }, [messages.length, streamingCount, streamingContent]);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white">
+    <div className="flex-1 overflow-y-auto bg-[var(--hm-bg)]">
       <div className="py-4">
         {messages.length === 0 && streamingMessages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-[#616061]">
+          <div className="flex flex-col items-center justify-center py-20 text-[var(--hm-muted)]">
             <span className="text-[15px]">
               No messages yet. Start the conversation!
             </span>
