@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getModel } from "@/lib/ai";
-import { streamText } from "ai";
+import { generateText, streamText } from "ai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import {
   extractDelegationBlocks,
@@ -34,6 +34,12 @@ To delegate a subtask to another agent, emit:
 The system will invoke that agent and stream their response. Max one level of delegation.
 `;
 
+// Debug instruction (added to agents with run_code tool)
+const DEBUG_INSTRUCTION = `
+SPECIAL DEBUG INSTRUCTION: If you want to silently validate complex Python code before displaying it (highly recommended), wrap it in: <ask_debugger>
+YOUR CODE
+</ask_debugger>. This guarantees a silent validation cycle before you finalize the sandbox.`;
+
 export async function POST(req: NextRequest) {
   const { channelId, agentHandle } = await req.json();
 
@@ -45,6 +51,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const startTime = Date.now();
 
   // Load agent config
   const { data: agent, error: agentError } = await supabase
@@ -113,6 +120,7 @@ export async function POST(req: NextRequest) {
 
   if (enabledTools.includes("run_code") || enabledTools.includes("e2b_sandbox")) {
     promptParts.push(getSandboxPrompt(enabledTools.includes("e2b_sandbox")).trim());
+    promptParts.push(DEBUG_INSTRUCTION.trim());
   }
 
   if (enabledTools.includes("delegate")) {
@@ -150,33 +158,145 @@ export async function POST(req: NextRequest) {
   const broadcastChannel = broadcastClient.channel(`stream:${channelId}`);
   await broadcastChannel.subscribe();
 
-  // Stream the response
+  // Create agent_run record
+  const { data: run } = await supabase
+    .from("agent_runs")
+    .insert({
+      agent_id: agent.id,
+      channel_id: channelId,
+      status: "running",
+      input_summary: (history[history.length - 1]?.content ?? "").slice(0, 500),
+      model_used: agent.model,
+      started_at: new Date().toISOString(),
+      steps: [{ step: "started", timestamp: new Date().toISOString() }],
+    })
+    .select()
+    .single();
+
+  const runId = run?.id;
+
+  // ─── Helper: silent debug loop via generateText ─────────────────────
+  async function runDebugLoop(draftText: string): Promise<string> {
+    const debugMatch = /<ask_debugger>([\s\S]*?)<\/ask_debugger>/g;
+    const matches = [...draftText.matchAll(debugMatch)];
+
+    if (matches.length === 0) return draftText;
+
+    // Send a "thinking" status to update broadcast
+    await broadcastChannel.send({
+      type: "broadcast",
+      event: "token",
+      payload: {
+        agentId: agent.id,
+        agentHandle: agent.handle,
+        agentName: agent.display_name,
+        agentEmoji: agent.avatar_emoji,
+        agentColor: agent.color,
+        model: agent.model,
+        content: "🔍 *Reviewing code for errors before delivering...*",
+        done: false,
+        runId,
+      },
+    });
+
+    // Update run status
+    if (runId) {
+      await supabase.from("agent_runs").update({
+        steps: [
+          { step: "started" },
+          { step: "draft_generated" },
+          { step: "debugging_code", timestamp: new Date().toISOString() },
+        ],
+      }).eq("id", runId);
+    }
+
+    // Validate each code block silently
+    let debugFeedback = "";
+    for (const m of matches) {
+      const codeToTest = m[1];
+      const debugValidation = await generateText({
+        model: getModel("google:gemini-2.5-flash"),
+        system: `You are @debugger, a merciless Python code reviewer specialized in Pyodide browser execution. Evaluate the provided code for:
+1. Missing imports
+2. Syntax errors
+3. Bad indentation
+4. Pyodide/browser incompatibility (e.g. FuncAnimation with plt.show() crashes — must use to_jshtml() or savefig instead)
+5. Using features not available in Pyodide
+
+If the code is 100% bug-free and robust, reply EXACTLY with 'CODE_APPROVED'.
+Otherwise, explain the exact error and write the corrected complete code.`,
+        prompt: codeToTest,
+      });
+      debugFeedback += `\n\n--- Debugger Feedback ---\n${debugValidation.text}\n`;
+    }
+
+    // Feed the debug results back into the agent for a second generation
+    const correctionResult = await generateText({
+      model: getModel(agent.model),
+      system: effectiveSystemPrompt,
+      messages: [
+        ...conversationMessages,
+        {
+          role: "assistant" as const,
+          content: draftText,
+        },
+        {
+          role: "user" as const,
+          content: `[SYSTEM — INTERNAL DEBUG REVIEW RESULTS]\n${debugFeedback}\n\nAnalyze the feedback above. If the debugger approved it, output your FINAL response with the <sandbox> block now. If the debugger found bugs, apply ALL fixes and output the corrected response with the fixed <sandbox> block. Do NOT include <ask_debugger> tags in this final response. Only output the polished user-facing response.`,
+        },
+      ],
+      temperature: agent.temperature,
+    });
+
+    // Strip any remaining <ask_debugger> tags just in case
+    return correctionResult.text.replace(/<ask_debugger>[\s\S]*?<\/ask_debugger>/g, "");
+  }
+
+  // ─── Main execution ─────────────────────────────────────────────────
   let fullContent = "";
 
   try {
-    const result = streamText({
+    // Phase 1: Collect the full first-turn response (non-streaming) to check for debug tags
+    const firstResult = await generateText({
       model: getModel(agent.model),
       system: effectiveSystemPrompt,
       messages: conversationMessages,
       temperature: agent.temperature,
     });
 
-    for await (const chunk of result.textStream) {
-      fullContent += chunk;
-      await broadcastChannel.send({
-        type: "broadcast",
-        event: "token",
-        payload: {
-          agentId: agent.id,
-          agentHandle: agent.handle,
-          agentName: agent.display_name,
-          agentEmoji: agent.avatar_emoji,
-          agentColor: agent.color,
-          model: agent.model,
-          content: fullContent,
-          done: false,
-        },
-      });
+    let rawOutput = firstResult.text;
+
+    // Phase 2: If debug tags found, run the silent loop
+    const hasDebugTags = /<ask_debugger>[\s\S]*?<\/ask_debugger>/.test(rawOutput);
+    if (hasDebugTags) {
+      rawOutput = await runDebugLoop(rawOutput);
+    }
+
+    fullContent = rawOutput;
+
+    // Phase 3: Stream the final clean result to the user token-by-token for a live feel
+    const words = fullContent.split(/(?<=\s)/); // split preserving whitespace
+    let streamed = "";
+    for (let i = 0; i < words.length; i++) {
+      streamed += words[i];
+      // Broadcast every ~5 words to avoid overwhelming
+      if (i % 5 === 0 || i === words.length - 1) {
+        await broadcastChannel.send({
+          type: "broadcast",
+          event: "token",
+          payload: {
+            agentId: agent.id,
+            agentHandle: agent.handle,
+            agentName: agent.display_name,
+            agentEmoji: agent.avatar_emoji,
+            agentColor: agent.color,
+            model: agent.model,
+            content: streamed,
+            done: false,
+            runId,
+          },
+        });
+      }
     }
 
     // Post-process: handle delegation blocks
@@ -206,14 +326,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const durationMs = Date.now() - startTime;
+
     // Insert final message
     await supabase.from("messages").insert({
       channel_id: channelId,
       sender_type: "agent",
       sender_id: agent.id,
       content: cleanContent,
-      metadata: { model: agent.model },
+      metadata: {
+        model: agent.model,
+        run_id: runId,
+        duration_ms: durationMs,
+        tokens: (firstResult.usage?.inputTokens ?? 0) + (firstResult.usage?.outputTokens ?? 0),
+      },
     });
+
+    // Update agent_run to completed
+    if (runId) {
+      await supabase.from("agent_runs").update({
+        status: "completed",
+        output_summary: cleanContent.slice(0, 2000),
+        token_count_input: firstResult.usage?.inputTokens ?? 0,
+        token_count_output: firstResult.usage?.outputTokens ?? 0,
+        duration_ms: durationMs,
+        completed_at: new Date().toISOString(),
+        steps: [
+          { step: "started" },
+          ...(hasDebugTags ? [{ step: "debug_loop_completed" }] : []),
+          { step: "completed", durationMs },
+        ],
+      }).eq("id", runId);
+    }
 
     // Send done signal
     await broadcastChannel.send({
@@ -224,6 +368,7 @@ export async function POST(req: NextRequest) {
         agentHandle: agent.handle,
         content: cleanContent,
         done: true,
+        runId,
       },
     });
 
@@ -247,7 +392,6 @@ export async function POST(req: NextRequest) {
           body: JSON.stringify({
             channelId,
             agentHandle: delegation.to,
-            // Inject the task as the last user message by posting it first
           }),
         }).catch(console.error);
 
@@ -263,6 +407,16 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error(`Agent @${agentHandle} stream error:`, err);
+
+    if (runId) {
+      await supabase.from("agent_runs").update({
+        status: "failed",
+        error: err instanceof Error ? err.message : "Unknown error",
+        duration_ms: Date.now() - startTime,
+        completed_at: new Date().toISOString(),
+      }).eq("id", runId);
+    }
+
     await broadcastChannel.send({
       type: "broadcast",
       event: "token",
@@ -271,11 +425,12 @@ export async function POST(req: NextRequest) {
         agentHandle: agent.handle,
         content: `⚠️ Error generating response: ${err instanceof Error ? err.message : "Unknown error"}`,
         done: true,
+        runId,
       },
     });
   } finally {
     broadcastClient.removeChannel(broadcastChannel);
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, runId });
 }
