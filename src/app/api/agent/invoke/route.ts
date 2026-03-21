@@ -4,7 +4,7 @@ import { getModel } from "@/lib/ai";
 import { streamText } from "ai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { assembleContext } from "@/lib/brain/assemble-context";
-import { embedMessage } from "@/lib/embeddings";
+import { embedMessage, generateEmbedding } from "@/lib/embeddings";
 import { webSearch } from "@/lib/agents/tools";
 import { generateImage } from "@/lib/agents/nanobanana";
 import { persistImageFromUrl } from "@/lib/supabase/storage";
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
 
       // Fire-and-forget embedding
       if (artistMsg?.id) {
-        embedMessage(artistMsg.id, content).catch(() => {});
+        embedMessage(artistMsg.id, content).catch(() => { });
       }
 
       // Update agent run
@@ -236,6 +236,57 @@ export async function POST(req: NextRequest) {
       broadcastClient.removeChannel(broadcastChannel);
     }
     return NextResponse.json({ success: true });
+  }
+
+  // For context agent: use semantic search across full history
+  const isContextAgent = agent.handle === "context";
+
+  if (isContextAgent && focusQuery) {
+    // Broadcast "searching memory" status
+    await broadcastChannel.send({
+      type: "broadcast",
+      event: "token",
+      payload: {
+        agentId: agent.id,
+        agentHandle: agent.handle,
+        agentName: agent.display_name,
+        agentEmoji: agent.avatar_emoji,
+        agentColor: agent.color,
+        model: agent.model,
+        content: "",
+        status: "searching_memory",
+        done: false,
+      },
+    });
+
+    try {
+      const embedding = await generateEmbedding(focusQuery);
+
+      const { data: matches, error: searchError } = await supabase.rpc("match_messages", {
+        query_embedding: JSON.stringify(embedding),
+        match_channel_id: channelId,
+        match_threshold: 0.3,
+        match_count: 20,
+      });
+
+      if (!searchError && matches && matches.length > 0) {
+        const memoryBlock = matches.map((m: any) => `[${m.sender_type}] ${m.content}`).join("\n\n");
+        enhancedSystemPrompt = `You are the team's all-knowing Context Agent. The user is asking a direct question about the past channel history. 
+        
+ABANDON YOUR STANDARD EXTRACTION BEHAVIOR. Your ONLY goal right now is to answer the user's question completely using the exact memories retrieved below. Be conversational and cite what was said.
+
+--- SEMANTIC SEARCH MEMORY (FULL HISTORY) ---
+Query: "${focusQuery}"
+${memoryBlock}
+--- END SEMANTIC SEARCH ---
+
+` + contextBlock;
+      } else {
+        enhancedSystemPrompt = `You are the Context Agent. The user asked about "${focusQuery}", but a semantic search of the full database history found ZERO mentions of this topic. Inform the user gracefully that it has never been discussed.`;
+      }
+    } catch (err) {
+      console.error("Context agent semantic search failed:", err);
+    }
   }
 
   // For researcher agent: search the web first and inject results into context
@@ -330,7 +381,7 @@ export async function POST(req: NextRequest) {
 
     // Fire-and-forget embedding
     if (agentMsg?.id) {
-      embedMessage(agentMsg.id, fullContent).catch(() => {});
+      embedMessage(agentMsg.id, fullContent).catch(() => { });
     }
 
     // Update agent run as completed
