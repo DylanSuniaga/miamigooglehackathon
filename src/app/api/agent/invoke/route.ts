@@ -4,6 +4,7 @@ import { getModel } from "@/lib/ai";
 import { streamText } from "ai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { assembleContext } from "@/lib/brain/assemble-context";
+import { embedMessage } from "@/lib/embeddings";
 import { webSearch } from "@/lib/agents/tools";
 import { generateImage } from "@/lib/agents/nanobanana";
 import { persistImageFromUrl } from "@/lib/supabase/storage";
@@ -76,8 +77,14 @@ export async function POST(req: NextRequest) {
     };
   });
 
+  // Extract focus query from last user message (for semantic search)
+  const lastUserMsg = history
+    .filter((m: { sender_type: string }) => m.sender_type === "user")
+    .pop();
+  const focusQuery = lastUserMsg?.content?.replace(/@\w+/g, "").trim() || undefined;
+
   // Assemble channel context and enhance system prompt
-  const contextBlock = await assembleContext(supabase, channelId, agent.id);
+  const contextBlock = await assembleContext(supabase, channelId, agent.id, focusQuery);
   let enhancedSystemPrompt = agent.system_prompt + contextBlock;
 
   // Insert agent run record
@@ -160,7 +167,7 @@ export async function POST(req: NextRequest) {
       const content = `**${caption}**\n\n![Generated image](${permanentUrl})`;
 
       // Insert message with attachments metadata
-      await supabase.from("messages").insert({
+      const { data: artistMsg } = await supabase.from("messages").insert({
         channel_id: channelId,
         sender_type: "agent",
         sender_id: agent.id,
@@ -175,7 +182,12 @@ export async function POST(req: NextRequest) {
             size: 0,
           }],
         },
-      });
+      }).select("id").single();
+
+      // Fire-and-forget embedding
+      if (artistMsg?.id) {
+        embedMessage(artistMsg.id, content).catch(() => {});
+      }
 
       // Update agent run
       if (agentRun?.id) {
@@ -305,7 +317,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert final message into DB
-    await supabase.from("messages").insert({
+    const { data: agentMsg } = await supabase.from("messages").insert({
       channel_id: channelId,
       sender_type: "agent",
       sender_id: agent.id,
@@ -314,7 +326,12 @@ export async function POST(req: NextRequest) {
         model: agent.model,
         ...(searchSources.length > 0 && { sources: searchSources }),
       },
-    });
+    }).select("id").single();
+
+    // Fire-and-forget embedding
+    if (agentMsg?.id) {
+      embedMessage(agentMsg.id, fullContent).catch(() => {});
+    }
 
     // Update agent run as completed
     if (agentRun?.id) {

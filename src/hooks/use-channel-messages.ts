@@ -188,13 +188,26 @@ export function useChannelMessages(channelId: string | null) {
         }
       }
 
-      await supabase.from("messages").insert({
-        channel_id: channelId,
-        sender_type: "user",
-        sender_id: DEMO_USER.id,
-        content: content.trim(),
-        metadata,
-      });
+      const { data: inserted } = await supabase
+        .from("messages")
+        .insert({
+          channel_id: channelId,
+          sender_type: "user",
+          sender_id: DEMO_USER.id,
+          content: content.trim(),
+          metadata,
+        })
+        .select("id")
+        .single();
+
+      // Fire-and-forget embedding generation
+      if (inserted?.id) {
+        fetch("/api/embed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messageId: inserted.id }),
+        }).catch(() => {});
+      }
     },
     [channelId]
   );

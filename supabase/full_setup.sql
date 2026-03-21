@@ -56,7 +56,7 @@ create table messages (
   content text not null default '',
   metadata jsonb default '{}',
   parent_message_id uuid references messages(id),
-  embedding vector(1536),
+  embedding vector(768),
   created_at timestamptz default now()
 );
 
@@ -183,7 +183,7 @@ alter table agent_runs enable row level security;
 
 -- SEMANTIC SEARCH
 create or replace function match_messages(
-  query_embedding vector(1536),
+  query_embedding vector(768),
   match_channel_id uuid,
   match_threshold float default 0.7,
   match_count int default 10
