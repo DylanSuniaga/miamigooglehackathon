@@ -1,6 +1,6 @@
 "use client";
 
-import { Hash, Bell, Smile, SlidersHorizontal, BookOpen, Sun, Moon } from "lucide-react";
+import { Hash, Bell, Smile, SlidersHorizontal, BookOpen, Rocket, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 
 interface ChannelHeaderProps {
@@ -9,6 +9,7 @@ interface ChannelHeaderProps {
   memberCount?: number;
   contextPanelOpen?: boolean;
   onToggleContextPanel?: () => void;
+  onLaunchAgent?: () => void;
 }
 
 export function ChannelHeader({
@@ -16,6 +17,7 @@ export function ChannelHeader({
   channelDescription,
   contextPanelOpen,
   onToggleContextPanel,
+  onLaunchAgent,
 }: ChannelHeaderProps) {
   const { theme, setTheme } = useTheme();
 
@@ -38,6 +40,16 @@ export function ChannelHeader({
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
+        {onLaunchAgent && (
+          <button
+            onClick={onLaunchAgent}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-[12px] font-medium text-[#1D1C1D] bg-[#F8F8F8] hover:bg-[#E8E8E8] border border-[#E0E0E0] rounded-md transition-colors"
+            title="Launch execution agent"
+          >
+            <Rocket className="h-3.5 w-3.5" />
+            Launch Agent
+          </button>
+        )}
         <button
           onClick={onToggleContextPanel}
           className={`transition-colors ${

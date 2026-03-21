@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getModel } from "@/lib/ai";
-import { streamText } from "ai";
+import { generateText, streamText, generateObject } from "ai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { assembleContext } from "@/lib/brain/assemble-context";
 import { embedMessage } from "@/lib/embeddings";
@@ -14,10 +14,55 @@ import {
   listCalendarEvents,
   deleteCalendarEvent,
 } from "@/lib/agents/calendar-tools";
-import { generateObject } from "ai";
+import {
+  extractDelegationBlocks,
+  stripDelegationBlocks,
+  extractAgentSpecBlock,
+  hasAgentSpecBlock,
+} from "@/lib/agents/delegation-parser";
 import { z } from "zod";
 
 const WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
+
+// Sandbox usage prompt
+const getSandboxPrompt = (isServer: boolean) => `
+## Code Execution
+When asked for a visualization, chart, graph, animation, data table, interactive demo, simulation, or any executable output:
+1. WRITE the actual code — do NOT only describe it in text.
+2. Wrap it like this:
+<sandbox language="python" title="<short descriptive title>"${isServer ? ' mode="server"' : ''}>
+<full runnable code>
+</sandbox>
+3. ${isServer ? "You are running in a persistent Ubuntu server sandbox with 'pip install' and full filesystem access." : "Python + matplotlib is preferred for charts/plots. Use numpy for math. Use pandas for data."}
+4. After the sandbox block, you may add brief explanation text.
+5. For multi-step tasks: produce a <sandbox> block for each executable component.
+`;
+
+// Delegation prompt
+const DELEGATION_SYSTEM_PROMPT = `
+## Agent Delegation
+To delegate a subtask to another agent, emit:
+<<<DELEGATE:{"to":"<handle>","task":"<clear task description}>>>
+The system will invoke that agent and stream their response. Max one level of delegation.
+`;
+
+// Pyodide-specific review prompt used for @build's self-review loop
+const PYODIDE_REVIEW_PROMPT = `You are reviewing Python code that will run inside Pyodide (Python in the browser via WebAssembly). Check for these CRITICAL issues:
+
+## MUST FIX
+1. **FuncAnimation + plt.show() CRASHES Pyodide.** The TimerWasm backend does not support it.
+   - For animations: generate multiple static frames and display a single representative frame with plt.savefig, OR use matplotlib's to_jshtml()
+   - NEVER call plt.show() — it is monkey-patched to no-op but FuncAnimation still crashes internally
+   - If the code uses FuncAnimation, REPLACE it with a static multi-panel plot or a loop that generates frame snapshots
+2. **plt.show() must NEVER appear** — the system captures figures automatically via savefig
+3. **Missing imports** — check every function/class is imported
+4. **Syntax errors** — check indentation, brackets, quotes
+5. **scipy.special.hermite** returns a poly1d — ensure it's called correctly
+6. **No input() or blocking I/O** — Pyodide doesn't support it
+
+## RESPONSE FORMAT
+If the code is perfect, reply with EXACTLY: CODE_APPROVED
+If there are bugs, reply with ONLY the complete corrected Python code (no explanation, no markdown fences, just the raw code).`;
 
 export async function POST(req: NextRequest) {
   const { channelId, agentHandle } = await req.json();
@@ -30,6 +75,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const startTime = Date.now();
 
   // Load agent config
   const { data: agent, error: agentError } = await supabase
@@ -56,19 +102,60 @@ export async function POST(req: NextRequest) {
 
   const history = (recentMessages ?? []).reverse();
 
-  // Load agents lookup for prefixing agent names in context
+  // Load agent directory
   const { data: allAgents } = await supabase
     .from("agents")
-    .select("id, handle")
-    .eq("workspace_id", WORKSPACE_ID);
+    .select("id, handle, display_name, description, tools")
+    .eq("workspace_id", WORKSPACE_ID)
+    .eq("is_active", true);
 
   const agentMap = new Map(
     (allAgents ?? []).map((a: { id: string; handle: string }) => [a.id, a.handle])
   );
 
+  const agentDirectory = (allAgents ?? [])
+    .filter((a: { handle: string }) => a.handle !== agentHandle)
+    .map((a: { handle: string; display_name: string; description: string }) =>
+      `@${a.handle} (${a.display_name})${a.description ? `: ${a.description}` : ""}`
+    )
+    .join("\n");
+
+  // Load workspace universal instructions
+  const { data: wsInstructions } = await supabase
+    .from("workspace_instructions")
+    .select("content, excluded_agent_ids")
+    .eq("workspace_id", WORKSPACE_ID)
+    .maybeSingle();
+
+  // Build effective system prompt
+  const enabledTools = (agent.tools as string[]) ?? [];
+  const promptParts: string[] = [];
+
+  if (wsInstructions?.content && !(wsInstructions.excluded_agent_ids ?? []).includes(agent.id)) {
+    promptParts.push(`[Universal Instructions]\n${wsInstructions.content}`);
+  }
+
+  promptParts.push(`[Your Instructions]\n${agent.system_prompt}`);
+
+  if (agentDirectory) {
+    promptParts.push(`[Available Agents — you can suggest or delegate to them]\n${agentDirectory}`);
+  }
+
+  if (enabledTools.includes("run_code") || enabledTools.includes("e2b_sandbox")) {
+    promptParts.push(getSandboxPrompt(enabledTools.includes("e2b_sandbox")).trim());
+  }
+
+  if (enabledTools.includes("delegate")) {
+    promptParts.push(DELEGATION_SYSTEM_PROMPT.trim());
+  }
+
+  promptParts.push(
+    `## Code & Workspace Tooling\nYou can ALWAYS ask the '@build' agent to write/execute visual code or create scaffolding and subagents for you.\nUse this syntax to delegate to it:\n<<<DELEGATE:{"to":"build","task":"<what you need>"}>>>`
+  );
+
+  let effectiveSystemPrompt = promptParts.join("\n\n---\n\n");
+
   // Build conversation messages
-  // All history is passed as user-role messages with speaker labels so the
-  // model doesn't mimic the "[@handle]: …" prefix in its own output.
   const conversationMessages = history.map((msg: { sender_type: string; sender_id: string; content: string }) => {
     let speaker: string;
     if (msg.sender_type === "agent") {
@@ -93,7 +180,7 @@ export async function POST(req: NextRequest) {
 
   // Assemble channel context and enhance system prompt
   const contextBlock = await assembleContext(supabase, channelId, agent.id, focusQuery);
-  let enhancedSystemPrompt = agent.system_prompt + contextBlock;
+  effectiveSystemPrompt += contextBlock;
 
   // Insert agent run record
   const runStartedAt = new Date().toISOString();
@@ -106,16 +193,17 @@ export async function POST(req: NextRequest) {
       input_summary: history.length > 0 ? history[history.length - 1]?.content?.slice(0, 200) : null,
       model_used: agent.model,
       started_at: runStartedAt,
+      steps: [{ step: "started", timestamp: runStartedAt }],
     })
     .select("id")
     .single();
+  const runId = agentRun?.id;
 
   // Set up broadcast channel for streaming tokens
   const broadcastClient = createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-
   const broadcastChannel = broadcastClient.channel(`stream:${channelId}`);
   await broadcastChannel.subscribe();
 
@@ -132,6 +220,7 @@ export async function POST(req: NextRequest) {
       model: agent.model,
       content: "",
       done: false,
+      runId,
     },
   });
 
@@ -139,7 +228,6 @@ export async function POST(req: NextRequest) {
   const isArtist = agent.handle === "artist";
   if (isArtist) {
     try {
-      // Broadcast generating_image status
       await broadcastChannel.send({
         type: "broadcast",
         event: "token",
@@ -153,28 +241,21 @@ export async function POST(req: NextRequest) {
           content: "",
           status: "generating_image",
           done: false,
+          runId,
         },
       });
 
-      // Extract prompt from last user message
       const lastUserMsg = history.filter((m: { sender_type: string }) => m.sender_type === "user").pop();
       const imagePrompt = lastUserMsg?.content?.replace(/@\w+/g, "").trim() ?? "";
 
-      if (!imagePrompt) {
-        throw new Error("No image prompt provided");
-      }
+      if (!imagePrompt) throw new Error("No image prompt provided");
 
-      // Generate image via Nanobanana
       const result = await generateImage(imagePrompt);
-
-      // Persist to Supabase Storage (Nanobanana URLs expire)
       const permanentUrl = await persistImageFromUrl(supabase, result.imageUrl, channelId);
 
-      // Build message content with markdown image
       const caption = result.revisedPrompt || imagePrompt;
       const content = `**${caption}**`;
 
-      // Insert message with attachments metadata
       const { data: artistMsg } = await supabase.from("messages").insert({
         channel_id: channelId,
         sender_type: "agent",
@@ -182,6 +263,7 @@ export async function POST(req: NextRequest) {
         content,
         metadata: {
           model: agent.model,
+          run_id: runId,
           original_prompt: imagePrompt,
           attachments: [{
             url: permanentUrl,
@@ -192,69 +274,56 @@ export async function POST(req: NextRequest) {
         },
       }).select("id").single();
 
-      // Fire-and-forget embedding
-      if (artistMsg?.id) {
-        embedMessage(artistMsg.id, content).catch(() => {});
-      }
+      if (artistMsg?.id) embedMessage(artistMsg.id, content).catch(() => {});
 
-      // Update agent run
-      if (agentRun?.id) {
+      if (runId) {
         const durationMs = Date.now() - new Date(runStartedAt).getTime();
         await supabase.from("agent_runs").update({
           status: "completed",
           output_summary: `Generated image: ${caption.slice(0, 200)}`,
           duration_ms: durationMs,
           completed_at: new Date().toISOString(),
-        }).eq("id", agentRun.id);
+        }).eq("id", runId);
       }
 
-      // Broadcast done
       await broadcastChannel.send({
         type: "broadcast",
         event: "token",
-        payload: {
-          agentId: agent.id,
-          agentHandle: agent.handle,
-          content,
-          done: true,
-        },
+        payload: { agentId: agent.id, agentHandle: agent.handle, content, done: true, runId },
       });
     } catch (err) {
       console.error("@artist error:", err);
-      if (agentRun?.id) {
-        const durationMs = Date.now() - new Date(runStartedAt).getTime();
+      if (runId) {
         await supabase.from("agent_runs").update({
           status: "failed",
           error: err instanceof Error ? err.message : "Unknown error",
-          duration_ms: durationMs,
+          duration_ms: Date.now() - new Date(runStartedAt).getTime(),
           completed_at: new Date().toISOString(),
-        }).eq("id", agentRun.id);
+        }).eq("id", runId);
       }
       await broadcastChannel.send({
         type: "broadcast",
         event: "token",
         payload: {
-          agentId: agent.id,
-          agentHandle: agent.handle,
+          agentId: agent.id, agentHandle: agent.handle,
           content: `⚠️ Error generating image: ${err instanceof Error ? err.message : "Unknown error"}`,
-          done: true,
+          done: true, runId,
         },
       });
     } finally {
       broadcastClient.removeChannel(broadcastChannel);
     }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, runId });
   }
 
   // ===== @coder: code generation + sandboxed execution =====
   const isCoder = agent.handle === "coder";
   if (isCoder) {
     try {
-      // Stream the LLM response so the user sees code being written
       let fullContent = "";
       const result = streamText({
         model: getModel(agent.model),
-        system: enhancedSystemPrompt,
+        system: effectiveSystemPrompt,
         messages: conversationMessages,
         temperature: agent.temperature,
       });
@@ -265,23 +334,16 @@ export async function POST(req: NextRequest) {
           type: "broadcast",
           event: "token",
           payload: {
-            agentId: agent.id,
-            agentHandle: agent.handle,
-            agentName: agent.display_name,
-            agentEmoji: agent.avatar_emoji,
-            agentColor: agent.color,
-            model: agent.model,
-            content: fullContent,
-            done: false,
+            agentId: agent.id, agentHandle: agent.handle,
+            agentName: agent.display_name, agentEmoji: agent.avatar_emoji,
+            agentColor: agent.color, model: agent.model,
+            content: fullContent, done: false, runId,
           },
         });
       }
 
-      // Extract code block from response
       const codeMatch = fullContent.match(/```(\w+)?\n([\s\S]*?)```/);
       let executionResult = null;
-
-      // Detect if the code is HTML — skip sandbox execution, store for preview
       let isHtml = false;
 
       if (codeMatch) {
@@ -290,48 +352,30 @@ export async function POST(req: NextRequest) {
         isHtml = language === "html" || (code.includes("<!DOCTYPE") || code.includes("<html"));
 
         if (isHtml) {
-          // No execution needed — store raw HTML for iframe preview
           fullContent += "\n\n---\n**Live preview available** — click \"View Live Preview\" below.";
         } else {
-          // Broadcast executing status
           await broadcastChannel.send({
             type: "broadcast",
             event: "token",
             payload: {
-              agentId: agent.id,
-              agentHandle: agent.handle,
-              agentName: agent.display_name,
-              agentEmoji: agent.avatar_emoji,
-              agentColor: agent.color,
-              model: agent.model,
-              content: fullContent,
-              status: "executing_code",
-              done: false,
+              agentId: agent.id, agentHandle: agent.handle,
+              agentName: agent.display_name, agentEmoji: agent.avatar_emoji,
+              agentColor: agent.color, model: agent.model,
+              content: fullContent, status: "executing_code", done: false, runId,
             },
           });
 
-          // Execute in sandbox
           executionResult = await executeCode(code, language as "python" | "javascript" | "r" | "bash");
 
-          // Append execution output to message
           fullContent += "\n\n---\n**Execution Output**";
-          if (executionResult.stdout) {
-            fullContent += `\n\`\`\`\n${executionResult.stdout}\n\`\`\``;
-          }
-          if (executionResult.stderr) {
-            fullContent += `\n\n**Stderr**\n\`\`\`\n${executionResult.stderr}\n\`\`\``;
-          }
-          if (executionResult.error) {
-            fullContent += `\n\n**Error**\n\`\`\`\n${executionResult.error}\n\`\`\``;
-          }
-          if (!executionResult.stdout && !executionResult.stderr && !executionResult.error) {
-            fullContent += "\n\n_No output produced._";
-          }
+          if (executionResult.stdout) fullContent += `\n\`\`\`\n${executionResult.stdout}\n\`\`\``;
+          if (executionResult.stderr) fullContent += `\n\n**Stderr**\n\`\`\`\n${executionResult.stderr}\n\`\`\``;
+          if (executionResult.error) fullContent += `\n\n**Error**\n\`\`\`\n${executionResult.error}\n\`\`\``;
+          if (!executionResult.stdout && !executionResult.stderr && !executionResult.error) fullContent += "\n\n_No output produced._";
           fullContent += `\n\n_Executed in ${executionResult.executionTimeMs}ms_`;
         }
       }
 
-      // Insert message
       const { data: coderMsg } = await supabase.from("messages").insert({
         channel_id: channelId,
         sender_type: "agent",
@@ -339,12 +383,9 @@ export async function POST(req: NextRequest) {
         content: fullContent,
         metadata: {
           model: agent.model,
+          run_id: runId,
           ...(isHtml && codeMatch && {
-            execution: {
-              language: "html",
-              code: codeMatch[2].trim(),
-              html: codeMatch[2].trim(),
-            },
+            execution: { language: "html", code: codeMatch[2].trim(), html: codeMatch[2].trim() },
           }),
           ...(!isHtml && executionResult && {
             execution: {
@@ -359,77 +400,58 @@ export async function POST(req: NextRequest) {
         },
       }).select("id").single();
 
-      // Fire-and-forget embedding
-      if (coderMsg?.id) {
-        embedMessage(coderMsg.id, fullContent).catch(() => {});
-      }
+      if (coderMsg?.id) embedMessage(coderMsg.id, fullContent).catch(() => {});
 
-      // Update agent run
-      if (agentRun?.id) {
-        const durationMs = Date.now() - new Date(runStartedAt).getTime();
+      if (runId) {
         await supabase.from("agent_runs").update({
           status: "completed",
           output_summary: fullContent.slice(0, 500),
-          duration_ms: durationMs,
+          duration_ms: Date.now() - new Date(runStartedAt).getTime(),
           completed_at: new Date().toISOString(),
-        }).eq("id", agentRun.id);
+        }).eq("id", runId);
       }
 
-      // Broadcast done
       await broadcastChannel.send({
         type: "broadcast",
         event: "token",
-        payload: {
-          agentId: agent.id,
-          agentHandle: agent.handle,
-          content: fullContent,
-          done: true,
-        },
+        payload: { agentId: agent.id, agentHandle: agent.handle, content: fullContent, done: true, runId },
       });
     } catch (err) {
       console.error("@coder error:", err);
-      if (agentRun?.id) {
-        const durationMs = Date.now() - new Date(runStartedAt).getTime();
+      if (runId) {
         await supabase.from("agent_runs").update({
           status: "failed",
           error: err instanceof Error ? err.message : "Unknown error",
-          duration_ms: durationMs,
+          duration_ms: Date.now() - new Date(runStartedAt).getTime(),
           completed_at: new Date().toISOString(),
-        }).eq("id", agentRun.id);
+        }).eq("id", runId);
       }
       await broadcastChannel.send({
         type: "broadcast",
         event: "token",
         payload: {
-          agentId: agent.id,
-          agentHandle: agent.handle,
+          agentId: agent.id, agentHandle: agent.handle,
           content: `⚠️ Error: ${err instanceof Error ? err.message : "Unknown error"}`,
-          done: true,
+          done: true, runId,
         },
       });
     } finally {
       broadcastClient.removeChannel(broadcastChannel);
     }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, runId });
   }
 
-  // ===== @assistant: calendar management =====
+  // ===== @assistant: calendar management (pre-process then fall through to stream) =====
   const isAssistant = agent.handle === "assistant";
   if (isAssistant) {
-    // Broadcast "scheduling..." status
     await broadcastChannel.send({
       type: "broadcast",
       event: "token",
       payload: {
-        agentId: agent.id,
-        agentHandle: agent.handle,
-        agentName: agent.display_name,
-        agentEmoji: agent.avatar_emoji,
-        agentColor: agent.color,
-        model: agent.model,
-        content: "",
-        status: "scheduling",
-        done: false,
+        agentId: agent.id, agentHandle: agent.handle,
+        agentName: agent.display_name, agentEmoji: agent.avatar_emoji,
+        agentColor: agent.color, model: agent.model,
+        content: "", status: "scheduling", done: false, runId,
       },
     });
 
@@ -489,80 +511,199 @@ export async function POST(req: NextRequest) {
         }
 
         if (calendarResult) {
-          enhancedSystemPrompt += `\n\n--- CALENDAR RESULT ---\n${calendarResult}\n--- END CALENDAR RESULT ---\n\nNarrate what you did (or found) to the user in a friendly, concise way. Do NOT repeat raw IDs or ISO timestamps — use human-readable dates and times.`;
+          effectiveSystemPrompt += `\n\n--- CALENDAR RESULT ---\n${calendarResult}\n--- END CALENDAR RESULT ---\n\nNarrate what you did (or found) to the user in a friendly, concise way. Do NOT repeat raw IDs or ISO timestamps — use human-readable dates and times.`;
         }
       } catch (err) {
         console.error("@assistant calendar error:", err);
-        enhancedSystemPrompt += `\n\n--- CALENDAR ERROR ---\nFailed to process calendar action: ${err instanceof Error ? err.message : "Unknown error"}\n--- END ---\n\nLet the user know the action failed and suggest they try again.`;
+        effectiveSystemPrompt += `\n\n--- CALENDAR ERROR ---\nFailed to process calendar action: ${err instanceof Error ? err.message : "Unknown error"}\n--- END ---\n\nLet the user know the action failed and suggest they try again.`;
       }
     }
   }
 
-  // For researcher agent: search the web first and inject results into context
+  // ===== @researcher: web search pre-processing =====
   const isResearcher = agent.handle === "researcher";
   let searchSources: { title: string; url: string }[] = [];
 
   if (isResearcher) {
-    // Broadcast "searching" status
     await broadcastChannel.send({
       type: "broadcast",
       event: "token",
       payload: {
-        agentId: agent.id,
-        agentHandle: agent.handle,
-        agentName: agent.display_name,
-        agentEmoji: agent.avatar_emoji,
-        agentColor: agent.color,
-        model: agent.model,
-        content: "",
-        status: "searching",
-        done: false,
+        agentId: agent.id, agentHandle: agent.handle,
+        agentName: agent.display_name, agentEmoji: agent.avatar_emoji,
+        agentColor: agent.color, model: agent.model,
+        content: "", status: "searching", done: false, runId,
       },
     });
 
-    // Extract the user's latest message as the search query
-    const lastUserMsg = history.filter((m: { sender_type: string }) => m.sender_type === "user").pop();
     const searchQuery = lastUserMsg?.content?.replace(/@\w+/g, "").trim() ?? "";
 
     if (searchQuery) {
       const searchResult = await webSearch(searchQuery);
       searchSources = searchResult.results.map((r) => ({ title: r.title, url: r.url }));
 
-      // Inject search results into the system prompt
       const sourcesBlock = searchResult.results
         .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`)
         .join("\n\n");
-      enhancedSystemPrompt += `\n\n--- WEB SEARCH RESULTS ---\nQuery: "${searchQuery}"\n${searchResult.answer ? `Summary: ${searchResult.answer}\n` : ""}\n${sourcesBlock}\n--- END SEARCH RESULTS ---\n\nUse the above search results to ground your response. Cite sources using markdown links.`;
+      effectiveSystemPrompt += `\n\n--- WEB SEARCH RESULTS ---\nQuery: "${searchQuery}"\n${searchResult.answer ? `Summary: ${searchResult.answer}\n` : ""}\n${sourcesBlock}\n--- END SEARCH RESULTS ---\n\nUse the above search results to ground your response. Cite sources using markdown links.`;
     }
   }
 
-  // Stream the response
-  let fullContent = "";
+  // ─── Determine if this agent should use the self-review loop ──────
+  const isBuildAgent = agentHandle === "build";
+  const hasSandboxCapability = enabledTools.includes("run_code") || enabledTools.includes("e2b_sandbox");
+  const shouldSelfReview = isBuildAgent && hasSandboxCapability;
 
-  try {
-    const result = streamText({
-      model: getModel(agent.model),
-      system: enhancedSystemPrompt,
-      messages: conversationMessages,
-      temperature: agent.temperature,
-    });
+  // ─── Helper: extract Python code from <sandbox> blocks ────────────
+  function extractSandboxPythonCode(text: string): string[] {
+    const blocks: string[] = [];
+    const regex = /<sandbox[^>]*language="python"[^>]*>([\s\S]*?)<\/sandbox>/g;
+    for (const m of text.matchAll(regex)) {
+      blocks.push(m[1].trim());
+    }
+    return blocks;
+  }
 
-    for await (const chunk of result.textStream) {
-      fullContent += chunk;
+  // ─── Helper: replace sandbox code in the original text ────────────
+  function replaceSandboxCode(text: string, _oldCode: string, newCode: string): string {
+    const regex = /<sandbox([^>]*language="python"[^>]*)>([\s\S]*?)<\/sandbox>/;
+    const match = text.match(regex);
+    if (match) {
+      return text.replace(match[0], `<sandbox${match[1]}>\n${newCode}\n</sandbox>`);
+    }
+    return text;
+  }
+
+  // ─── Helper: self-review loop for @build ───────────────────────────
+  async function selfReviewCode(fullText: string): Promise<string> {
+    const sandboxCodes = extractSandboxPythonCode(fullText);
+    if (sandboxCodes.length === 0) return fullText;
+
+    let result = fullText;
+
+    for (const code of sandboxCodes) {
       await broadcastChannel.send({
         type: "broadcast",
         event: "token",
         payload: {
-          agentId: agent.id,
-          agentHandle: agent.handle,
-          agentName: agent.display_name,
-          agentEmoji: agent.avatar_emoji,
-          agentColor: agent.color,
-          model: agent.model,
-          content: fullContent,
-          done: false,
+          agentId: agent.id, agentHandle: agent.handle,
+          agentName: agent.display_name, agentEmoji: agent.avatar_emoji,
+          agentColor: agent.color, model: agent.model,
+          content: "🔍 *Reviewing code for Pyodide compatibility...*",
+          done: false, runId,
         },
       });
+
+      const reviewResult = await generateText({
+        model: getModel("google:gemini-3-flash-preview"),
+        system: PYODIDE_REVIEW_PROMPT,
+        prompt: code,
+      });
+
+      const feedback = reviewResult.text.trim();
+
+      if (feedback === "CODE_APPROVED") continue;
+
+      const cleanedCode = feedback
+        .replace(/^```python\n?/m, "")
+        .replace(/^```\n?/m, "")
+        .replace(/\n?```$/m, "")
+        .trim();
+
+      result = replaceSandboxCode(result, code, cleanedCode);
+    }
+
+    result = result.replace(/<ask_debugger>[\s\S]*?<\/ask_debugger>/g, "");
+    return result;
+  }
+
+  // ─── Main execution ───────────────────────────────────────────────
+  let fullContent = "";
+
+  try {
+    if (shouldSelfReview) {
+      // ─── @build path: generate → self-review → stream clean result ──
+      const firstResult = await generateText({
+        model: getModel(agent.model),
+        system: effectiveSystemPrompt,
+        messages: conversationMessages,
+        temperature: agent.temperature,
+      });
+
+      let rawOutput = firstResult.text;
+      rawOutput = rawOutput.replace(/<ask_debugger>[\s\S]*?<\/ask_debugger>/g, "");
+      rawOutput = await selfReviewCode(rawOutput);
+      fullContent = rawOutput;
+
+      // Simulate streaming the final clean result
+      const words = fullContent.split(/(?<=\s)/);
+      let streamed = "";
+      for (let i = 0; i < words.length; i++) {
+        streamed += words[i];
+        if (i % 5 === 0 || i === words.length - 1) {
+          await broadcastChannel.send({
+            type: "broadcast",
+            event: "token",
+            payload: {
+              agentId: agent.id, agentHandle: agent.handle,
+              agentName: agent.display_name, agentEmoji: agent.avatar_emoji,
+              agentColor: agent.color, model: agent.model,
+              content: streamed, done: false, runId,
+            },
+          });
+        }
+      }
+    } else {
+      // ─── All other agents: standard real-time streaming ─────────────
+      const result = streamText({
+        model: getModel(agent.model),
+        system: effectiveSystemPrompt,
+        messages: conversationMessages,
+        temperature: agent.temperature,
+      });
+
+      for await (const chunk of result.textStream) {
+        fullContent += chunk;
+        await broadcastChannel.send({
+          type: "broadcast",
+          event: "token",
+          payload: {
+            agentId: agent.id, agentHandle: agent.handle,
+            agentName: agent.display_name, agentEmoji: agent.avatar_emoji,
+            agentColor: agent.color, model: agent.model,
+            content: fullContent, done: false, runId,
+          },
+        });
+      }
+    }
+
+    // ─── Post-processing (shared for both paths) ──────────────────────
+
+    // Handle delegation blocks
+    const delegationBlocks = extractDelegationBlocks(fullContent);
+    let cleanContent = delegationBlocks.length > 0
+      ? stripDelegationBlocks(fullContent)
+      : fullContent;
+
+    // Handle @build agent spec
+    if (hasAgentSpecBlock(fullContent)) {
+      const spec = extractAgentSpecBlock(fullContent);
+      if (spec) {
+        await supabase.from("agents").insert({
+          workspace_id: WORKSPACE_ID,
+          handle: spec.handle,
+          display_name: spec.display_name,
+          avatar_emoji: spec.avatar_emoji ?? "🤖",
+          color: spec.color ?? "#378ADD",
+          model: spec.model ?? "google:gemini-2.5-flash",
+          temperature: 0.7,
+          is_active: true,
+          agent_type: spec.agent_type ?? "thinking",
+          description: spec.description ?? null,
+          system_prompt: spec.system_prompt,
+          tools: spec.tools ?? [],
+        });
+      }
     }
 
     // Append sources section for researcher
@@ -573,38 +714,43 @@ export async function POST(req: NextRequest) {
       const sourcesSection = uniqueSources
         .map((s, i) => `${i + 1}. [${s.title}](${s.url})`)
         .join("\n");
-      fullContent += `\n\n---\n**Sources**\n${sourcesSection}`;
+      cleanContent += `\n\n---\n**Sources**\n${sourcesSection}`;
     }
 
-    // Insert final message into DB
+    const durationMs = Date.now() - startTime;
+
+    // Insert final message
     const { data: agentMsg } = await supabase.from("messages").insert({
       channel_id: channelId,
       sender_type: "agent",
       sender_id: agent.id,
-      content: fullContent,
+      content: cleanContent,
       metadata: {
         model: agent.model,
+        run_id: runId,
+        duration_ms: durationMs,
         ...(searchSources.length > 0 && { sources: searchSources }),
       },
     }).select("id").single();
 
     // Fire-and-forget embedding
     if (agentMsg?.id) {
-      embedMessage(agentMsg.id, fullContent).catch(() => {});
+      embedMessage(agentMsg.id, cleanContent).catch(() => {});
     }
 
-    // Update agent run as completed
-    if (agentRun?.id) {
-      const durationMs = Date.now() - new Date(runStartedAt).getTime();
-      await supabase
-        .from("agent_runs")
-        .update({
-          status: "completed",
-          output_summary: fullContent.slice(0, 500),
-          duration_ms: durationMs,
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", agentRun.id);
+    // Update agent_run to completed
+    if (runId) {
+      await supabase.from("agent_runs").update({
+        status: "completed",
+        output_summary: cleanContent.slice(0, 2000),
+        duration_ms: durationMs,
+        completed_at: new Date().toISOString(),
+        steps: [
+          { step: "started" },
+          ...(shouldSelfReview ? [{ step: "code_self_review" }] : []),
+          { step: "completed", durationMs },
+        ],
+      }).eq("id", runId);
     }
 
     // Send done signal
@@ -614,26 +760,51 @@ export async function POST(req: NextRequest) {
       payload: {
         agentId: agent.id,
         agentHandle: agent.handle,
-        content: fullContent,
+        content: cleanContent,
         done: true,
+        runId,
       },
     });
-  } catch (err) {
-    console.error(`Agent @${agentHandle} stream error:`, err);
-    // Update agent run as failed
-    if (agentRun?.id) {
-      const durationMs = Date.now() - new Date(runStartedAt).getTime();
-      await supabase
-        .from("agent_runs")
-        .update({
-          status: "failed",
-          error: err instanceof Error ? err.message : "Unknown error",
-          duration_ms: durationMs,
-          completed_at: new Date().toISOString(),
-        })
-        .eq("id", agentRun.id);
+
+    // Fire delegation sub-invocations
+    if (delegationBlocks.length > 0) {
+      for (const delegation of delegationBlocks) {
+        await supabase.from("messages").insert({
+          channel_id: channelId,
+          sender_type: "system",
+          sender_id: agent.id,
+          content: `🔀 **${agent.display_name}** delegated to **@${delegation.to}**: "${delegation.task.slice(0, 100)}"`,
+          metadata: { type: "delegation" },
+        });
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+        fetch(`${appUrl}/api/agent/invoke`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channelId, agentHandle: delegation.to }),
+        }).catch(console.error);
+
+        await supabase.from("messages").insert({
+          channel_id: channelId,
+          sender_type: "user",
+          sender_id: "system",
+          content: delegation.task,
+          metadata: { type: "delegation_task", from: agent.handle },
+        });
+      }
     }
-    // Send error as broadcast so client knows streaming failed
+  } catch (err) {
+    console.error(`Agent @${agentHandle} invoke error:`, err);
+
+    if (runId) {
+      await supabase.from("agent_runs").update({
+        status: "failed",
+        error: err instanceof Error ? err.message : "Unknown error",
+        duration_ms: Date.now() - startTime,
+        completed_at: new Date().toISOString(),
+      }).eq("id", runId);
+    }
+
     await broadcastChannel.send({
       type: "broadcast",
       event: "token",
@@ -642,11 +813,12 @@ export async function POST(req: NextRequest) {
         agentHandle: agent.handle,
         content: `⚠️ Error generating response: ${err instanceof Error ? err.message : "Unknown error"}`,
         done: true,
+        runId,
       },
     });
   } finally {
     broadcastClient.removeChannel(broadcastChannel);
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, runId });
 }

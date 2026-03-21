@@ -1,5 +1,13 @@
+"use client";
+
+import React from "react";
 import { Trash2, FileText, Download, ExternalLink } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+import { hasSandboxBlock, stripSandboxBlocks } from "@/lib/sandbox/extract-sandbox-block";
+import { SandboxOutputCard } from "@/components/chat/sandbox-output-card";
 import type { Attachment } from "@/lib/types";
 
 interface AgentInfo {
@@ -44,6 +52,10 @@ export function MessageBubble({
   const execution = metadata?.execution as { language?: string; code?: string; html?: string } | undefined;
   const hasHtmlPreview = execution?.html;
 
+  // Detect and strip sandbox blocks for separate rendering
+  const hasSandbox = isAgent && hasSandboxBlock(content);
+  const displayContent = hasSandbox ? stripSandboxBlocks(content) : content;
+
   return (
     <div
       className="group relative flex gap-3 px-5 py-3 hover:bg-[var(--hm-surface-light)]"
@@ -81,9 +93,17 @@ export function MessageBubble({
         <div className="mt-0.5 text-[15px] leading-[1.5] text-[var(--hm-text)]">
           {isAgent ? (
             <div className="prose-sm max-w-none">
-              <ReactMarkdown components={markdownComponents}>
-                {content}
-              </ReactMarkdown>
+              {displayContent && (
+                <ReactMarkdown
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={markdownComponents}
+                >
+                  {displayContent}
+                </ReactMarkdown>
+              )}
+              {/* Sandbox output card — auto-runs code from <<<SANDBOX:{}>>> blocks */}
+              {hasSandbox && <SandboxOutputCard messageContent={content} autoRun={true} />}
             </div>
           ) : (
             <span className="whitespace-pre-wrap">

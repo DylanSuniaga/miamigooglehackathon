@@ -52,11 +52,12 @@ Five default thinking agents ship with every workspace. Each uses a different fr
 
 | Agent | Model | Temp | Role |
 |---|---|---|---|
-| 🧠 **@brainstorm** | Gemini 3.0 Flash | 0.9 — divergent | Creative ideation; generates 5-8 unexpected ideas per response, riffs on teammate input |
-| 🔍 **@critic** | Claude Sonnet | 0.4 — analytical | Identifies blind spots, challenges assumptions, frames every critique as a question |
-| 📐 **@architect** | GPT-4o | 0.3 — precise | Translates ideas into buildable specs: components, data models, APIs, MVP scope |
-| 📊 **@researcher** | Gemini 2.5 Pro | 0.3 — grounded | Web search via Tavily; provides cited, data-backed market and feasibility analysis |
-| 🧭 **@context** | Gemini 2.5 Flash | 0.2 — structured | Extracts decisions, actions, and assumptions; answers "what did we decide about X?" |
+| 🧠 **@brainstorm** | Gemini 3.0 Flash Preview | 0.9 — divergent | Creative ideation; generates 5-8 unexpected ideas per response, riffs on teammate input |
+| 🔍 **@critic** | Gemini 3.0 Flash Preview | 0.4 — analytical | Identifies blind spots, challenges assumptions, frames every critique as a question |
+| 📐 **@architect** | Gemini 3.0 Flash Preview | 0.3 — precise | Translates ideas into buildable specs: components, data models, APIs, MVP scope |
+| 📊 **@researcher** | Gemini 3.0 Flash Preview | 0.3 — grounded | Web search via Tavily; provides cited, data-backed market and feasibility analysis |
+| 🧭 **@context** | Gemini 3.0 Flash Preview | 0.2 — structured | Extracts decisions, actions, and assumptions; answers "what did we decide about X?" |
+| 🏗️ **@build** | Gemini 3.1 Pro | 0.4 — dynamic | Meta-agent with deterministic tool registry (create_chart, display_data, create_graph), builds agents, writes code, orchestrates delegation |
 
 ---
 
@@ -613,4 +614,45 @@ CRUNCHBASE_API_KEY=
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+---
+
+## Phase 6 Extensions
+
+### 1. Launch Button Text
+Renamed to **"Launch Agent"** in `src/components/layout/channel-header.tsx`.
+
+### 2. In-Chat Code Execution Sandbox
+- Agents embed `<<<SANDBOX:{"language":"python","code":"...","title":"..."}>>>` in their response.
+- Client detects the block and renders `SandboxOutputCard` in the message (visible to all channel members).
+- Runs via **Pyodide** (Python WebAssembly in-browser, no server key required).
+- Supported outputs: matplotlib charts → PNG, pandas DataFrames → styled table, print() → text, JS, HTML iframes.
+- SQL: `supabase/migrations/00005_sandbox_runs.sql`
+
+### 3. Complex Agents with Tool Orchestration
+- Runner: `src/lib/agents/complex-agent-runner.ts`
+- Built-in tools: `run_code`, `read_docs`, `query_channel`, `web_search` (requires `TAVILY_API_KEY`)
+- **Context7 MCP** (optional) — real-time library documentation lookup:
+  - Set `CONTEXT7_MCP_API_TOKEN` in `.env`
+  - Endpoint: `https://mcp.context7.com/mcp`
+  - Get token at: https://context7.com
+- Enable tools per-agent via `agents.tools` JSONB in Agent Manager.
+
+### 4. LaTeX Rendering in Chat
+- `$...$` → KaTeX InlineMath, `$$...$$` → KaTeX BlockMath
+- Rendered via `react-katex` in `message-bubble.tsx`
+- Graceful fallback on parse failure.
+
+### 5. Universal Agent Instructions
+- Panel: **Agent Manager → Instructions tab** (globe icon)
+- Content is prepended to every qualifying agent's system prompt at inference time
+- SQL: `supabase/migrations/00004_workspace_instructions.sql`
+- API: `GET / PATCH /api/workspace/instructions`
+- Applied in both `/api/agent/invoke` and `/api/agent/launch`
+
+### New Env Vars
+```env
+TAVILY_API_KEY=          # optional — web_search tool in complex agents
+CONTEXT7_MCP_API_TOKEN=  # optional — real-time library docs via Context7 MCP
 ```

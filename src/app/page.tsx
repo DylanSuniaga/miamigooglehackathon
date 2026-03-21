@@ -9,10 +9,12 @@ import { MessageInput } from "@/components/chat/message-input";
 import { CreateChannelDialog } from "@/components/channel/create-channel-dialog";
 import { AgentManagerLayout } from "@/components/agent-manager/agent-manager-layout";
 import { CalendarView } from "@/components/calendar/calendar-view";
+import { AgentLauncherModal } from "@/components/agent-manager/agent-launcher-modal";
 import { ContextPanel } from "@/components/context-panel/context-panel";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useChannelMessages } from "@/hooks/use-channel-messages";
 import { useAgentStreaming, type StreamingMessage as StreamingMessageType } from "@/hooks/use-agent-streaming";
+import { useAgentRuns } from "@/hooks/use-agent-runs";
 
 const MOCK_DM_USERS = [
   { id: "d1", name: "Blake Anderson", avatarColor: "#7F77DD", you: true },
@@ -28,6 +30,7 @@ export default function Home() {
   const [pendingAgents, setPendingAgents] = useState<StreamingMessageType[]>([]);
   const [activeView, setActiveView] = useState<AppView>("messages");
   const [contextPanelOpen, setContextPanelOpen] = useState(false);
+  const [showLauncher, setShowLauncher] = useState(false);
 
   // Set default channel once loaded
   useEffect(() => {
@@ -41,6 +44,21 @@ export default function Home() {
     useChannelMessages(activeChannelId);
 
   const { streamingMessages } = useAgentStreaming(activeChannelId);
+
+  const { activeRuns } = useAgentRuns(activeChannelId);
+
+  // Build enriched runs with agent metadata
+  const enrichedRuns = useMemo(() => {
+    return activeRuns.map((run) => {
+      const agent = agents.find((a) => a.id === run.agent_id);
+      return {
+        ...run,
+        agentName: agent?.display_name,
+        agentEmoji: agent?.avatar_emoji,
+        agentColor: agent?.color,
+      };
+    });
+  }, [activeRuns, agents]);
 
   // Remove pending agents once real streaming starts
   useEffect(() => {
@@ -143,7 +161,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full w-full overflow-hidden bg-white relative">
       <IconRail activeView={activeView} onViewChange={setActiveView} />
 
       {activeView === "messages" ? (
@@ -161,11 +179,13 @@ export default function Home() {
               channelDescription={currentChannel?.description}
               contextPanelOpen={contextPanelOpen}
               onToggleContextPanel={() => setContextPanelOpen((prev) => !prev)}
+              onLaunchAgent={() => setShowLauncher(true)}
             />
             <MessageList
               messages={messages}
               streamingMessages={allStreamingMessages}
               agents={agentPills}
+              activeRuns={enrichedRuns}
               onDeleteMessage={deleteMessage}
             />
             <MessageInput
@@ -194,6 +214,15 @@ export default function Home() {
       ) : (
         <CalendarView />
       )}
+
+      {/* Agent Launcher Modal */}
+      <AgentLauncherModal
+        open={showLauncher}
+        onClose={() => setShowLauncher(false)}
+        agents={agents}
+        channelId={activeChannelId ?? ""}
+        channelName={currentChannel?.name ?? ""}
+      />
     </div>
   );
 }

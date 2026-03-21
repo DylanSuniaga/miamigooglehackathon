@@ -3,11 +3,13 @@
 import { useState, useEffect } from "react";
 import type { Agent } from "@/lib/types";
 import { Save, RotateCcw } from "lucide-react";
+import { ToolsPanel } from "./tools-panel";
 
 const AVAILABLE_MODELS = [
+  { value: "google:gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview (Code)" },
+  { value: "google:gemini-3-flash-preview", label: "Gemini 3 Flash Preview (Fast)" },
   { value: "google:gemini-2.5-flash", label: "Gemini 2.5 Flash" },
   { value: "google:gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-  { value: "google:gemini-2.0-flash", label: "Gemini 2.0 Flash" },
 ];
 
 const AGENT_COLORS = [
@@ -27,6 +29,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
   const [color, setColor] = useState(agent.color);
   const [isActive, setIsActive] = useState(agent.is_active);
   const [description, setDescription] = useState(agent.description ?? "");
+  const [tools, setTools] = useState<string[]>((agent.tools as string[]) ?? []);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -38,6 +41,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
     setColor(agent.color);
     setIsActive(agent.is_active);
     setDescription(agent.description ?? "");
+    setTools((agent.tools as string[]) ?? []);
     setSaved(false);
   }, [agent]);
 
@@ -47,7 +51,8 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
     temperature !== agent.temperature ||
     color !== agent.color ||
     isActive !== agent.is_active ||
-    description !== (agent.description ?? "");
+    description !== (agent.description ?? "") ||
+    JSON.stringify(tools.sort()) !== JSON.stringify(((agent.tools as string[]) ?? []).sort());
 
   async function handleSave() {
     setSaving(true);
@@ -59,6 +64,7 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
         color,
         is_active: isActive,
         description: description || null,
+        tools,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -74,10 +80,11 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
     setColor(agent.color);
     setIsActive(agent.is_active);
     setDescription(agent.description ?? "");
+    setTools((agent.tools as string[]) ?? []);
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[var(--hm-bg)]">
+    <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[var(--hm-bg)]">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--hm-border)]">
         <div className="flex items-center gap-3">
@@ -241,29 +248,9 @@ export function AgentConfigEditor({ agent, onSave }: AgentConfigEditorProps) {
           </p>
         </div>
 
-        {/* Tools (read-only for now, placeholder) */}
+        {/* Tools */}
         <div>
-          <label className="block text-[13px] font-semibold text-[var(--hm-text)] mb-1.5">
-            Tools
-          </label>
-          <div className="border border-[var(--hm-border)] rounded-md p-3">
-            {agent.tools && (agent.tools as string[]).length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {(agent.tools as string[]).map((tool) => (
-                  <span
-                    key={tool}
-                    className="text-[12px] px-2 py-1 rounded-md bg-[var(--hm-surface)] text-[var(--hm-muted)] font-mono"
-                  >
-                    {tool}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[12px] text-[var(--hm-muted-light)]">
-                No tools configured. Tools can be added in Phase 6 (Execution Agents).
-              </p>
-            )}
-          </div>
+          <ToolsPanel enabledTools={tools} onChange={setTools} />
         </div>
       </div>
     </div>
