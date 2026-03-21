@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { DEMO_USER } from "@/lib/demo-user";
+import { DEMO_USERS } from "@/lib/demo-user";
 import { format } from "date-fns";
 import type { Message, Profile, Agent, Attachment } from "@/lib/types";
 
@@ -33,7 +33,8 @@ function hashColor(str: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function useChannelMessages(channelId: string | null) {
+export function useChannelMessages(channelId: string | null, userId?: string) {
+  const activeUserId = userId || DEMO_USERS[0].id;
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const profilesRef = useRef<Map<string, Profile>>(new Map());
@@ -198,7 +199,7 @@ export function useChannelMessages(channelId: string | null) {
         .insert({
           channel_id: channelId,
           sender_type: "user",
-          sender_id: DEMO_USER.id,
+          sender_id: activeUserId,
           content: content.trim(),
           metadata,
         })
@@ -214,7 +215,7 @@ export function useChannelMessages(channelId: string | null) {
         }).catch(() => {});
       }
     },
-    [channelId]
+    [channelId, activeUserId]
   );
 
   const deleteMessage = useCallback(
