@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { ArrowUp, Smile, Paperclip, AtSign, Type, X, FileText } from "lucide-react";
 
 interface AgentInfo {
@@ -31,6 +31,34 @@ export function MessageInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const hasContent = message.trim().length > 0 || pendingFiles.length > 0;
+
+  const agentColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const a of agents) map[a.handle.toLowerCase()] = a.color;
+    return map;
+  }, [agents]);
+
+  const renderHighlightedText = useCallback(
+    (text: string) => {
+      // Split on @mentions, keeping the delimiter
+      const parts = text.split(/(@\w+)/g);
+      return parts.map((part, i) => {
+        if (part.startsWith("@")) {
+          const handle = part.slice(1).toLowerCase();
+          const color = agentColorMap[handle];
+          if (color) {
+            return (
+              <span key={i} style={{ color }}>
+                {part}
+              </span>
+            );
+          }
+        }
+        return <span key={i}>{part}</span>;
+      });
+    },
+    [agentColorMap]
+  );
 
   // Filter agents based on what's typed after @
   const filteredAgents = useMemo(() => {
@@ -239,15 +267,26 @@ export function MessageInput({
           </div>
         )}
 
-        <textarea
-          ref={textareaRef}
-          value={message}
-          onChange={handleChange}
-          placeholder={`Message #${channelName}`}
-          rows={1}
-          className="w-full resize-none bg-transparent px-3 py-2 text-[14px] text-[var(--hm-text)] placeholder-[var(--hm-muted)] outline-none"
-          onKeyDown={handleKeyDown}
-        />
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={handleChange}
+            placeholder={`Message #${channelName}`}
+            rows={1}
+            className="relative w-full resize-none bg-transparent px-3 py-2 text-[14px] placeholder-[var(--hm-muted)] outline-none caret-[var(--hm-text)]"
+            style={{ color: "transparent", caretColor: "var(--hm-text)" }}
+            onKeyDown={handleKeyDown}
+          />
+          {/* Colored text overlay — must match textarea font exactly */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 whitespace-pre-wrap break-words px-3 py-2 text-[14px] text-[var(--hm-text)] font-[inherit]"
+          >
+            {renderHighlightedText(message)}
+            {"\u00A0"}
+          </div>
+        </div>
 
         {/* Toolbar row */}
         <div className="flex items-center justify-between px-3 py-1.5 border-t border-[var(--hm-surface)]">

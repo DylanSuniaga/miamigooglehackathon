@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
 
       // Build message content with markdown image
       const caption = result.revisedPrompt || imagePrompt;
-      const content = `**${caption}**\n\n![Generated image](${permanentUrl})`;
+      const content = `**${caption}**`;
 
       // Insert message with attachments metadata
       const { data: artistMsg } = await supabase.from("messages").insert({
