@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { IconRail } from "@/components/layout/icon-rail";
+import { IconRail, type AppView } from "@/components/layout/icon-rail";
 import { ChannelSidebar } from "@/components/layout/channel-sidebar";
 import { ChannelHeader } from "@/components/layout/channel-header";
 import { MessageList } from "@/components/chat/message-list";
 import { MessageInput } from "@/components/chat/message-input";
 import { CreateChannelDialog } from "@/components/channel/create-channel-dialog";
+import { AgentManagerLayout } from "@/components/agent-manager/agent-manager-layout";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useChannelMessages } from "@/hooks/use-channel-messages";
 
@@ -21,6 +22,7 @@ export default function Home() {
   const { channels, loading: workspaceLoading, createChannel } = useWorkspace();
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [activeView, setActiveView] = useState<AppView>("messages");
 
   // Set default channel once loaded
   useEffect(() => {
@@ -56,31 +58,37 @@ export default function Home() {
 
   return (
     <div className="flex h-full">
-      <IconRail />
-      <ChannelSidebar
-        channels={sidebarChannels}
-        activeChannelId={activeChannelId ?? ""}
-        onChannelSelect={setActiveChannelId}
-        onCreateChannel={() => setShowCreateChannel(true)}
-        dmUsers={MOCK_DM_USERS}
-      />
-      <div className="flex flex-1 flex-col min-w-0">
-        <ChannelHeader
-          channelName={currentChannel?.name ?? ""}
-          channelDescription={currentChannel?.description}
-        />
-        <MessageList messages={messages} onDeleteMessage={deleteMessage} />
-        <MessageInput
-          channelName={currentChannel?.name ?? ""}
-          onSend={sendMessage}
-        />
-      </div>
+      <IconRail activeView={activeView} onViewChange={setActiveView} />
 
-      <CreateChannelDialog
-        open={showCreateChannel}
-        onClose={() => setShowCreateChannel(false)}
-        onCreate={handleCreateChannel}
-      />
+      {activeView === "messages" ? (
+        <>
+          <ChannelSidebar
+            channels={sidebarChannels}
+            activeChannelId={activeChannelId ?? ""}
+            onChannelSelect={setActiveChannelId}
+            onCreateChannel={() => setShowCreateChannel(true)}
+            dmUsers={MOCK_DM_USERS}
+          />
+          <div className="flex flex-1 flex-col min-w-0">
+            <ChannelHeader
+              channelName={currentChannel?.name ?? ""}
+              channelDescription={currentChannel?.description}
+            />
+            <MessageList messages={messages} onDeleteMessage={deleteMessage} />
+            <MessageInput
+              channelName={currentChannel?.name ?? ""}
+              onSend={sendMessage}
+            />
+          </div>
+          <CreateChannelDialog
+            open={showCreateChannel}
+            onClose={() => setShowCreateChannel(false)}
+            onCreate={handleCreateChannel}
+          />
+        </>
+      ) : (
+        <AgentManagerLayout />
+      )}
     </div>
   );
 }
