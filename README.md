@@ -1,7 +1,5 @@
 ![Hivemind](public/header.jpeg)
 
-# Hivemind
-
 **AI-Native Team Workspace + Agent Management Platform**
 
 A channel-based collaboration workspace where AI agents are first-class participants — not sidebar tools, not separate tabs. Humans and agents brainstorm, challenge, specify, and plan together in the same stream.
