@@ -1,79 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Wrench, ExternalLink, CheckCircle2, Circle, Lock } from "lucide-react";
-
-export interface ToolDefinition {
-  id: string;
-  label: string;
-  description: string;
-  requiresKey?: string;
-  category: "core" | "data" | "external" | "agent";
-}
-
-export const ALL_TOOLS: ToolDefinition[] = [
-  // Core
-  {
-    id: "run_code",
-    label: "Run Code (Sandbox)",
-    description: "Execute Python, JavaScript, or HTML inline in chat. Shows charts, DataFrames, animations, and raw output to all channel members.",
-    category: "core",
-  },
-  {
-    id: "read_docs",
-    label: "Read Context Docs",
-    description: "Load this agent's own context documents before generating a response.",
-    category: "core",
-  },
-  {
-    id: "query_channel",
-    label: "Query Channel",
-    description: "Read recent channel messages for additional context before responding.",
-    category: "core",
-  },
-  {
-    id: "delegate",
-    label: "Delegate to Agents",
-    description: "Hand off subtasks to other workspace agents using <<<DELEGATE:{}>>> markers. Great for orchestrator agents.",
-    category: "agent",
-  },
-  // Data / External
-  {
-    id: "web_search",
-    label: "Web Search",
-    description: "Search the live web via Tavily for up-to-date information.",
-    requiresKey: "TAVILY_API_KEY",
-    category: "data",
-  },
-  {
-    id: "context7",
-    label: "Library Docs (Context7)",
-    description: "Look up real-time, version-specific documentation for any programming library (Next.js, React, Supabase, etc.).",
-    requiresKey: "CONTEXT7_MCP_API_TOKEN",
-    category: "external",
-  },
-  {
-    id: "e2b_sandbox",
-    label: "E2B Sandbox (Server)",
-    description: "Persistent server-side sandbox. Can install packages, write files, and maintain state across steps. Use for Dev agents.",
-    requiresKey: "E2B_API_KEY",
-    category: "external",
-  },
-  {
-    id: "github",
-    label: "GitHub",
-    description: "Create branches, commit files, and open pull requests on GitHub repositories.",
-    requiresKey: "GITHUB_TOKEN",
-    category: "external",
-  },
-];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  core: "Core Tools",
-  agent: "Agent Orchestration",
-  data: "Data & Search",
-  external: "External Integrations",
-};
+import { Wrench, ExternalLink, CheckCircle2, Circle, Lock, Sparkles } from "lucide-react";
+import {
+  TOOL_REGISTRY,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  type ToolSpec,
+} from "@/lib/tools/tool-registry";
 
 interface ToolsPanelProps {
   enabledTools: string[];
@@ -90,8 +24,6 @@ export function ToolsPanel({ enabledTools, onChange }: ToolsPanelProps) {
       onChange([...enabledTools, id]);
     }
   }
-
-  const categories = ["core", "agent", "data", "external"] as const;
 
   return (
     <div>
@@ -113,11 +45,11 @@ export function ToolsPanel({ enabledTools, onChange }: ToolsPanelProps) {
             <span className="text-[12px] text-[#ABABAD]">No tools enabled</span>
           ) : (
             enabledTools.map((id) => {
-              const tool = ALL_TOOLS.find((t) => t.id === id);
+              const tool = TOOL_REGISTRY.find((t) => t.id === id);
               return (
                 <span key={id} className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md bg-[#EBF5FF] text-[#1264A3] font-mono">
                   <Wrench className="h-2.5 w-2.5" />
-                  {tool?.label ?? id}
+                  {tool?.name ?? id}
                 </span>
               );
             })
@@ -125,8 +57,9 @@ export function ToolsPanel({ enabledTools, onChange }: ToolsPanelProps) {
         </div>
       ) : (
         <div className="rounded-lg border border-[#E0E0E0] overflow-hidden divide-y divide-[#E0E0E0]">
-          {categories.map((cat) => {
-            const catTools = ALL_TOOLS.filter((t) => t.category === cat);
+          {CATEGORY_ORDER.map((cat) => {
+            const catTools = TOOL_REGISTRY.filter((t) => t.category === cat);
+            if (catTools.length === 0) return null;
             return (
               <div key={cat} className="bg-white">
                 <div className="px-3 py-1.5 bg-[#F8F8F8] border-b border-[#E0E0E0]">
@@ -136,6 +69,7 @@ export function ToolsPanel({ enabledTools, onChange }: ToolsPanelProps) {
                 </div>
                 {catTools.map((tool) => {
                   const enabled = enabledTools.includes(tool.id);
+                  const isDeterministic = tool.codegen != null;
                   return (
                     <label
                       key={tool.id}
@@ -157,8 +91,14 @@ export function ToolsPanel({ enabledTools, onChange }: ToolsPanelProps) {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[13px] font-medium text-[#1D1C1D]">
-                            {tool.label}
+                            {tool.name}
                           </span>
+                          {isDeterministic && (
+                            <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-[#E8F5E9] text-[#1D9E75] font-mono">
+                              <Sparkles className="h-2.5 w-2.5" />
+                              Auto-gen
+                            </span>
+                          )}
                           {tool.requiresKey && (
                             <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-[#FFF7E6] text-[#BA7517] font-mono">
                               <Lock className="h-2.5 w-2.5" />
@@ -181,8 +121,11 @@ export function ToolsPanel({ enabledTools, onChange }: ToolsPanelProps) {
 
       {/* Docs hint */}
       <p className="text-[11px] text-[#ABABAD] mt-1.5 flex items-center gap-1">
-        <ExternalLink className="h-2.5 w-2.5" />
-        Tools with 🔒 require env vars — see README for setup
+        <Sparkles className="h-2.5 w-2.5" />
+        <span className="text-[#1D9E75]">Auto-gen</span> tools generate bug-free code from templates
+        <span className="mx-1">·</span>
+        <Lock className="h-2.5 w-2.5" />
+        Tools with 🔒 require env vars
       </p>
     </div>
   );

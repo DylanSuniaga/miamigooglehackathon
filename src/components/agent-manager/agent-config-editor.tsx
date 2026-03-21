@@ -6,9 +6,10 @@ import { Save, RotateCcw } from "lucide-react";
 import { ToolsPanel } from "./tools-panel";
 
 const AVAILABLE_MODELS = [
+  { value: "google:gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview (Code)" },
+  { value: "google:gemini-3-flash-preview", label: "Gemini 3 Flash Preview (Fast)" },
   { value: "google:gemini-2.5-flash", label: "Gemini 2.5 Flash" },
   { value: "google:gemini-2.5-pro", label: "Gemini 2.5 Pro" },
-  { value: "google:gemini-2.0-flash", label: "Gemini 2.0 Flash" },
 ];
 
 const AGENT_COLORS = [

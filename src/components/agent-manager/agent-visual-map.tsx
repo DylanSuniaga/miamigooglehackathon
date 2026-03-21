@@ -14,8 +14,7 @@ import "@xyflow/react/dist/style.css";
 import { Bot, FileText, Settings, Cpu, Wrench, Users } from "lucide-react";
 import type { Agent, AgentContextDocument } from "@/lib/types";
 
-// Import tool list to map IDs to readable names
-import { ALL_TOOLS } from "./tools-panel";
+import { TOOL_REGISTRY } from "@/lib/tools/tool-registry";
 
 // --- Custom Nodes ---
 
@@ -212,7 +211,7 @@ export function AgentVisualMap({ agent, contextDocs, allAgents, onNodeDoubleClic
 
     // 4. Tool Nodes (Bottom side)
     const activeTools = Array.isArray(agent.tools) ? agent.tools : [];
-    const toolMap = new Map(ALL_TOOLS.map(t => [t.id, t.label]));
+    const toolMap = new Map(TOOL_REGISTRY.map(t => [t.id, t.name]));
     
     activeTools.forEach((toolId, idx) => {
       const nodeId = `tool-${toolId}`;

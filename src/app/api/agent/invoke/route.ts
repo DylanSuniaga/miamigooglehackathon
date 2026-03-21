@@ -229,7 +229,7 @@ export async function POST(req: NextRequest) {
 
       // Self-review: ask a fast model to check the code
       const reviewResult = await generateText({
-        model: getModel("google:gemini-2.5-flash"),
+        model: getModel("google:gemini-3-flash-preview"),
         system: PYODIDE_REVIEW_PROMPT,
         prompt: code,
       });
