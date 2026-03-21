@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type AppView = "messages" | "agents";
+export type AppView = "messages" | "agents" | "calendar";
 
 const NAV_ITEMS = [
   { icon: MessageSquare, label: "Messages", view: "messages" as AppView },
@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { icon: Users, label: "People" },
   { icon: FileText, label: "Documents" },
   { icon: Mail, label: "Mail" },
-  { icon: Calendar, label: "Calendar" },
+  { icon: Calendar, label: "Calendar", view: "calendar" as AppView },
 ];
 
 interface IconRailProps {

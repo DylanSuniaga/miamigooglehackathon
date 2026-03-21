@@ -9,6 +9,13 @@ import { webSearch } from "@/lib/agents/tools";
 import { generateImage } from "@/lib/agents/nanobanana";
 import { persistImageFromUrl } from "@/lib/supabase/storage";
 import { executeCode } from "@/lib/agents/e2b-sandbox";
+import {
+  createCalendarEvent,
+  listCalendarEvents,
+  deleteCalendarEvent,
+} from "@/lib/agents/calendar-tools";
+import { generateObject } from "ai";
+import { z } from "zod";
 
 const WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -404,6 +411,91 @@ export async function POST(req: NextRequest) {
       broadcastClient.removeChannel(broadcastChannel);
     }
     return NextResponse.json({ success: true });
+  }
+
+  // ===== @assistant: calendar management =====
+  const isAssistant = agent.handle === "assistant";
+  if (isAssistant) {
+    // Broadcast "scheduling..." status
+    await broadcastChannel.send({
+      type: "broadcast",
+      event: "token",
+      payload: {
+        agentId: agent.id,
+        agentHandle: agent.handle,
+        agentName: agent.display_name,
+        agentEmoji: agent.avatar_emoji,
+        agentColor: agent.color,
+        model: agent.model,
+        content: "",
+        status: "scheduling",
+        done: false,
+      },
+    });
+
+    const lastUserMsg2 = history
+      .filter((m: { sender_type: string }) => m.sender_type === "user")
+      .pop();
+    const userQuery = lastUserMsg2?.content?.replace(/@\w+/g, "").trim() ?? "";
+
+    if (userQuery) {
+      try {
+        const now = new Date();
+        const { object: intent } = await generateObject({
+          model: getModel("google:gemini-2.5-flash"),
+          schema: z.object({
+            action: z.enum(["create", "list", "delete", "none"]),
+            title: z.string().optional(),
+            description: z.string().optional(),
+            start_time: z.string().optional(),
+            end_time: z.string().optional(),
+            all_day: z.boolean().optional(),
+            event_id: z.string().optional(),
+          }),
+          prompt: `Current date/time: ${now.toISOString()}. User request: "${userQuery}"\n\nExtract the calendar intent. For "create", infer reasonable start_time and end_time as ISO 8601 strings. For "list", set start_time and end_time to the date range requested (e.g. "this week" = Monday to Sunday). For "delete", set event_id if identifiable. If no calendar action is needed, use "none".`,
+        });
+
+        let calendarResult = "";
+
+        if (intent.action === "create" && intent.title && intent.start_time) {
+          const endTime = intent.end_time || new Date(new Date(intent.start_time).getTime() + 3600000).toISOString();
+          const event = await createCalendarEvent({
+            title: intent.title,
+            description: intent.description,
+            start_time: intent.start_time,
+            end_time: endTime,
+            all_day: intent.all_day,
+            channel_id: channelId,
+            agent_id: agent.id,
+            created_by: "00000000-0000-0000-0000-000000000200",
+          });
+          calendarResult = `CALENDAR ACTION COMPLETED: Created event "${event.title}" on ${new Date(event.start_time).toLocaleString()}${event.all_day ? " (all day)" : ` to ${new Date(event.end_time).toLocaleTimeString()}`}.`;
+        } else if (intent.action === "list" && intent.start_time && intent.end_time) {
+          const events = await listCalendarEvents({
+            start_date: intent.start_time,
+            end_date: intent.end_time,
+          });
+          if (events.length === 0) {
+            calendarResult = "CALENDAR QUERY: No events found in the requested time range.";
+          } else {
+            const eventList = events
+              .map((e) => `- "${e.title}" on ${new Date(e.start_time).toLocaleString()}${e.all_day ? " (all day)" : ` to ${new Date(e.end_time).toLocaleTimeString()}`}${e.description ? ` — ${e.description}` : ""}`)
+              .join("\n");
+            calendarResult = `CALENDAR QUERY: Found ${events.length} event(s):\n${eventList}`;
+          }
+        } else if (intent.action === "delete" && intent.event_id) {
+          await deleteCalendarEvent(intent.event_id);
+          calendarResult = `CALENDAR ACTION COMPLETED: Deleted event ${intent.event_id}.`;
+        }
+
+        if (calendarResult) {
+          enhancedSystemPrompt += `\n\n--- CALENDAR RESULT ---\n${calendarResult}\n--- END CALENDAR RESULT ---\n\nNarrate what you did (or found) to the user in a friendly, concise way. Do NOT repeat raw IDs or ISO timestamps — use human-readable dates and times.`;
+        }
+      } catch (err) {
+        console.error("@assistant calendar error:", err);
+        enhancedSystemPrompt += `\n\n--- CALENDAR ERROR ---\nFailed to process calendar action: ${err instanceof Error ? err.message : "Unknown error"}\n--- END ---\n\nLet the user know the action failed and suggest they try again.`;
+      }
+    }
   }
 
   // For researcher agent: search the web first and inject results into context

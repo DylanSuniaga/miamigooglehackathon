@@ -115,6 +115,22 @@ export interface Attachment {
   size: number;
 }
 
+export interface CalendarEvent {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  all_day: boolean;
+  color: string;
+  created_by: string;
+  created_by_agent: string | null;
+  channel_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AgentContextDocument {
   id: string;
   agent_id: string;

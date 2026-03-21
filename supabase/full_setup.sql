@@ -132,7 +132,25 @@ create table agent_runs (
   created_at timestamptz default now()
 );
 
+-- CALENDAR
+create table calendar_events (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid references workspaces(id) on delete cascade not null,
+  title text not null,
+  description text,
+  start_time timestamptz not null,
+  end_time timestamptz not null,
+  all_day boolean default false,
+  color text default '#378ADD',
+  created_by uuid not null,
+  created_by_agent uuid references agents(id),
+  channel_id uuid references channels(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 -- INDEXES
+create index idx_calendar_events_workspace_time on calendar_events(workspace_id, start_time);
 create index idx_agent_context_docs_agent_active on agent_context_documents(agent_id, is_active);
 create index idx_agent_runs_agent_time on agent_runs(agent_id, created_at desc);
 create index idx_messages_channel_time on messages(channel_id, created_at);
@@ -146,6 +164,7 @@ alter publication supabase_realtime add table context_decisions;
 alter publication supabase_realtime add table context_actions;
 alter publication supabase_realtime add table context_assumptions;
 alter publication supabase_realtime add table agent_runs;
+alter publication supabase_realtime add table calendar_events;
 
 -- Full replica identity so DELETE payloads include row data
 alter table messages replica identity full;
@@ -154,6 +173,7 @@ alter table context_decisions replica identity full;
 alter table context_actions replica identity full;
 alter table context_assumptions replica identity full;
 alter table agent_runs replica identity full;
+alter table calendar_events replica identity full;
 
 -- Permissive RLS (no auth for now — demo mode)
 alter table workspaces enable row level security;
@@ -177,9 +197,11 @@ create policy "Allow all" on context_actions for all using (true) with check (tr
 create policy "Allow all" on context_assumptions for all using (true) with check (true);
 create policy "Allow all" on agent_context_documents for all using (true) with check (true);
 create policy "Allow all" on agent_runs for all using (true) with check (true);
+create policy "Allow all" on calendar_events for all using (true) with check (true);
 
 alter table agent_context_documents enable row level security;
 alter table agent_runs enable row level security;
+alter table calendar_events enable row level security;
 
 -- SEMANTIC SEARCH
 create or replace function match_messages(
@@ -257,11 +279,20 @@ insert into agents (id, workspace_id, handle, display_name, description, agent_t
   ('00000000-0000-0000-0000-000000000106', '00000000-0000-0000-0000-000000000001',
    'coder', 'Coder', 'Code generation and execution in sandboxed environments', 'execution',
    'You are Coder, the team''s hands-on programmer. When asked to write code, respond with a brief explanation followed by a single fenced code block. The code block MUST specify the language (```python, ```javascript, ```bash, ```r, or ```html). Your code will be automatically extracted and executed in a sandboxed environment. Include print statements to show results. Do NOT include multiple code blocks. Default to Python if no language specified. For websites, landing pages, or UI demos, use ```html with a complete HTML document (including inline CSS and JS) — it will be rendered as a live preview the user can view in their browser.',
-   'google:gemini-2.5-flash', 0.3, '💻', '#10B981');
+   'google:gemini-2.5-flash', 0.3, '💻', '#10B981'),
+
+  ('00000000-0000-0000-0000-000000000107', '00000000-0000-0000-0000-000000000001',
+   'assistant', 'Assistant', 'Personal assistant for scheduling and calendar management', 'execution',
+   'You are Assistant, the team''s personal helper. You manage the team calendar — scheduling meetings, listing upcoming events, and removing cancelled ones. When you create, list, or delete events, the results are injected into your context automatically. Narrate what you did in a friendly, concise way. Use bullet points for event lists. Always confirm what action you took. If the user''s request is ambiguous, make a reasonable assumption and state it.',
+   'google:gemini-2.5-flash', 0.3, '📅', '#16A34A');
 
 -- Give @researcher the webSearch tool
 update agents set tools = '["webSearch"]'::jsonb
 where handle = 'researcher' and workspace_id = '00000000-0000-0000-0000-000000000001';
+
+-- Give @assistant the calendar tool
+update agents set tools = '["calendar"]'::jsonb
+where handle = 'assistant' and workspace_id = '00000000-0000-0000-0000-000000000001';
 
 -- Add agents and demo user to channels
 insert into channel_members (channel_id, member_type, member_id) values
@@ -278,6 +309,9 @@ insert into channel_members (channel_id, member_type, member_id) values
   ('00000000-0000-0000-0000-000000000010', 'agent', '00000000-0000-0000-0000-000000000106'),
   ('00000000-0000-0000-0000-000000000011', 'agent', '00000000-0000-0000-0000-000000000106'),
   ('00000000-0000-0000-0000-000000000012', 'agent', '00000000-0000-0000-0000-000000000106'),
+  ('00000000-0000-0000-0000-000000000010', 'agent', '00000000-0000-0000-0000-000000000107'),
+  ('00000000-0000-0000-0000-000000000011', 'agent', '00000000-0000-0000-0000-000000000107'),
+  ('00000000-0000-0000-0000-000000000012', 'agent', '00000000-0000-0000-0000-000000000107'),
   ('00000000-0000-0000-0000-000000000010', 'user', '00000000-0000-0000-0000-000000000200'),
   ('00000000-0000-0000-0000-000000000011', 'user', '00000000-0000-0000-0000-000000000200'),
   ('00000000-0000-0000-0000-000000000012', 'user', '00000000-0000-0000-0000-000000000200');
