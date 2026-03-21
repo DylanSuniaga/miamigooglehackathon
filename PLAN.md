@@ -57,6 +57,8 @@ Five default thinking agents ship with every workspace. Each uses a different fr
 | 📐 **@architect** | GPT-4o | 0.3 — precise | Translates ideas into buildable specs: components, data models, APIs, MVP scope |
 | 📊 **@researcher** | Gemini 2.5 Pro | 0.3 — grounded | Web search via Tavily; provides cited, data-backed market and feasibility analysis |
 | 🧭 **@context** | Gemini 2.5 Flash | 0.2 — structured | Extracts decisions, actions, and assumptions; answers "what did we decide about X?" |
+| 🏗️ **@build** | Gemini 2.5 Flash | 0.4 — dynamic | Meta-agent capable of deploying subagents, outputting visual browser widgets, and orchestrating workflow delegation |
+| 🐞 **@debugger** | Gemini 2.5 Flash | 0.7 — strict | Quality control guardrail verifying output and logic before @build finalizes execution workflows |
 
 ---
 

@@ -94,6 +94,13 @@ export function usePyodide() {
 import sys, io
 _stdout_capture = io.StringIO()
 sys.stdout = _stdout_capture
+
+# Pre-emptively disable plt.show() to prevent Pyodide TimerWasm UI crashes, we evaluate manually
+try:
+    import matplotlib.pyplot as _plt
+    _plt.show = lambda *args, **kwargs: None
+except ImportError:
+    pass
 `;
     const teardown = `
 _captured_output = _stdout_capture.getvalue()
@@ -111,16 +118,37 @@ sys.stdout = sys.__stdout__
       const captured = String(py.globals.get("_captured_output") ?? "");
       const durationMs = Date.now() - start;
 
-      // Check if matplotlib figure was created
+      // Check if matplotlib figure or animation was created
       let figureHtml = "";
       try {
-        const hasFig = await py.runPythonAsync(`
+        // First check for animations
+        const animationHtml = await py.runPythonAsync(`
+import sys
+_html = ""
+if 'matplotlib.animation' in sys.modules:
+    for _k, _v in list(globals().items()):
+        if hasattr(_v, 'to_jshtml') and not _k.startswith('_'):
+            try:
+                # Close all figures before generating animation to prevent duplicate static rendering
+                import matplotlib.pyplot as plt
+                _html = _v.to_jshtml()
+                plt.close('all')
+                break
+            except Exception as e:
+                _html = f"<div style='color:red;'>Animation Error: {str(e)}</div>"
+_html
+`);
+        
+        if (animationHtml) {
+          figureHtml = String(animationHtml);
+        } else {
+          // Fallback to static PNG if no active animation
+          const hasFig = await py.runPythonAsync(`
 import sys
 'matplotlib' in sys.modules and bool(getattr(__import__('matplotlib.pyplot', fromlist=['pyplot']), 'get_fignums')())
 `);
-        if (hasFig) {
-          // Export figure as base64 PNG
-          const b64 = await py.runPythonAsync(`
+          if (hasFig) {
+            const b64 = await py.runPythonAsync(`
 import matplotlib.pyplot as plt, base64, io as _io
 _buf = _io.BytesIO()
 plt.savefig(_buf, format='png', bbox_inches='tight', dpi=120)
@@ -128,7 +156,8 @@ plt.close('all')
 _buf.seek(0)
 base64.b64encode(_buf.read()).decode()
 `);
-          figureHtml = `<img src="data:image/png;base64,${b64}" alt="Plot" style="max-width:100%;border-radius:8px;" />`;
+            figureHtml = `<img src="data:image/png;base64,${b64}" alt="Plot" style="max-width:100%;border-radius:8px;background:white;" />`;
+          }
         }
       } catch {
         // No matplotlib, that's fine
