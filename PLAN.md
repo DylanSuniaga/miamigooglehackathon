@@ -555,6 +555,16 @@ export const DEMO_USER = {
 
 ---
 
+## Testing Strategy
+
+*To ensure the core features remain functional:*
+1. **Agent Config Persistence:** Update an agent's configuration (prompt, model) in the UI, save it, and verify the changes persist across page reloads (testing Supabase write/read logic).
+2. **Context Document Assignment:** Add a new context document to an agent and ensure it properly links to the correct `agent_id` via the UI.
+3. **Model Limitations (Gemini):** Verify that the agent selection UI only permits Gemini models (since the system relies on a tier 3 `GEMINI_API_KEY`).
+4. **Agent Invocation:** Verify that typing `@agent_name` triggers the correct agent and it responds using the designated model setup.
+
+---
+
 ## Priority Stack 
 
 **MUST**

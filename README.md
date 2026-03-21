@@ -23,13 +23,21 @@ npm install
 
 # Set up environment variables
 cp .env.local.example .env.local
-# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY, etc.
+# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY (IMPORTANT!)
+# Set GEMINI_API_KEY for Gemini models
 
 # Run dev server
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+## Testing
+
+*To verify your setup:*
+1. Run a generic test `npm test` (if framework like Vitest is setup).
+2. **Agent Assignment Test:** In the UI, navigate to the **Agents** tab. Select an agent (e.g., Brainstorm) and update its system prompt. Save the changes and reload the page to verify the DB persistence works.
+3. **Gemini Key Verification:** Attempt to trigger an agent in the chat view; it should gracefully use the `GEMINI_API_KEY`.
 
 ## What's Implemented
 
