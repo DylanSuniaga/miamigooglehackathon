@@ -56,7 +56,7 @@ create table messages (
   content text not null default '',
   metadata jsonb default '{}',
   parent_message_id uuid references messages(id),
-  embedding vector(1536),
+  embedding vector(768),
   created_at timestamptz default now()
 );
 
@@ -183,7 +183,7 @@ alter table agent_runs enable row level security;
 
 -- SEMANTIC SEARCH
 create or replace function match_messages(
-  query_embedding vector(1536),
+  query_embedding vector(768),
   match_channel_id uuid,
   match_threshold float default 0.7,
   match_count int default 10
@@ -204,6 +204,12 @@ create or replace function match_messages(
   order by messages.embedding <=> query_embedding
   limit match_count;
 $$;
+
+-- STORAGE BUCKET for chat attachments
+insert into storage.buckets (id, name, public) values ('images', 'images', true);
+create policy "Public read access" on storage.objects for select using (bucket_id = 'images');
+create policy "Allow uploads" on storage.objects for insert with check (bucket_id = 'images');
+create policy "Allow deletes" on storage.objects for delete using (bucket_id = 'images');
 
 -- SEED DATA
 insert into workspaces (id, name) values
@@ -241,7 +247,12 @@ insert into agents (id, workspace_id, handle, display_name, description, agent_t
   ('00000000-0000-0000-0000-000000000104', '00000000-0000-0000-0000-000000000001',
    'context', 'Context', 'Team context management and synthesis', 'system',
    'You are Context, the team''s memory engine. You extract: 1) DECISIONS with rationale. 2) ACTION ITEMS with owners and due dates. 3) ASSUMPTIONS flagged as untested/validated/challenged. Be concise — use bullet points and status indicators.',
-   'google:gemini-2.5-flash', 0.2, '🧭', '#BA7517');
+   'google:gemini-2.5-flash', 0.2, '🧭', '#BA7517'),
+
+  ('00000000-0000-0000-0000-000000000105', '00000000-0000-0000-0000-000000000001',
+   'artist', 'Artist', 'Visual creation and image generation', 'execution',
+   'You are Artist, the team''s visual creator. You generate images to help teams visualize ideas, mockups, marketing campaigns, logos, and concepts. You interpret creative briefs and produce compelling visuals. When given a prompt, focus on creating the most impactful visual representation possible.',
+   'nanobanana:gemini-2.5-flash-image', 0.7, '🎨', '#E85D75');
 
 -- Give @researcher the webSearch tool
 update agents set tools = '["webSearch"]'::jsonb
@@ -257,6 +268,8 @@ insert into channel_members (channel_id, member_type, member_id) values
   ('00000000-0000-0000-0000-000000000011', 'agent', '00000000-0000-0000-0000-000000000100'),
   ('00000000-0000-0000-0000-000000000011', 'agent', '00000000-0000-0000-0000-000000000101'),
   ('00000000-0000-0000-0000-000000000011', 'agent', '00000000-0000-0000-0000-000000000102'),
+  ('00000000-0000-0000-0000-000000000010', 'agent', '00000000-0000-0000-0000-000000000105'),
+  ('00000000-0000-0000-0000-000000000011', 'agent', '00000000-0000-0000-0000-000000000105'),
   ('00000000-0000-0000-0000-000000000010', 'user', '00000000-0000-0000-0000-000000000200'),
   ('00000000-0000-0000-0000-000000000011', 'user', '00000000-0000-0000-0000-000000000200'),
   ('00000000-0000-0000-0000-000000000012', 'user', '00000000-0000-0000-0000-000000000200');

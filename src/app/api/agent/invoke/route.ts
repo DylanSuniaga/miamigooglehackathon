@@ -4,7 +4,10 @@ import { getModel } from "@/lib/ai";
 import { streamText } from "ai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { assembleContext } from "@/lib/brain/assemble-context";
+import { embedMessage } from "@/lib/embeddings";
 import { webSearch } from "@/lib/agents/tools";
+import { generateImage } from "@/lib/agents/nanobanana";
+import { persistImageFromUrl } from "@/lib/supabase/storage";
 
 const WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -74,8 +77,14 @@ export async function POST(req: NextRequest) {
     };
   });
 
+  // Extract focus query from last user message (for semantic search)
+  const lastUserMsg = history
+    .filter((m: { sender_type: string }) => m.sender_type === "user")
+    .pop();
+  const focusQuery = lastUserMsg?.content?.replace(/@\w+/g, "").trim() || undefined;
+
   // Assemble channel context and enhance system prompt
-  const contextBlock = await assembleContext(supabase, channelId, agent.id);
+  const contextBlock = await assembleContext(supabase, channelId, agent.id, focusQuery);
   let enhancedSystemPrompt = agent.system_prompt + contextBlock;
 
   // Insert agent run record
@@ -117,6 +126,117 @@ export async function POST(req: NextRequest) {
       done: false,
     },
   });
+
+  // ===== @artist: image generation (skip streamText entirely) =====
+  const isArtist = agent.handle === "artist";
+  if (isArtist) {
+    try {
+      // Broadcast generating_image status
+      await broadcastChannel.send({
+        type: "broadcast",
+        event: "token",
+        payload: {
+          agentId: agent.id,
+          agentHandle: agent.handle,
+          agentName: agent.display_name,
+          agentEmoji: agent.avatar_emoji,
+          agentColor: agent.color,
+          model: agent.model,
+          content: "",
+          status: "generating_image",
+          done: false,
+        },
+      });
+
+      // Extract prompt from last user message
+      const lastUserMsg = history.filter((m: { sender_type: string }) => m.sender_type === "user").pop();
+      const imagePrompt = lastUserMsg?.content?.replace(/@\w+/g, "").trim() ?? "";
+
+      if (!imagePrompt) {
+        throw new Error("No image prompt provided");
+      }
+
+      // Generate image via Nanobanana
+      const result = await generateImage(imagePrompt);
+
+      // Persist to Supabase Storage (Nanobanana URLs expire)
+      const permanentUrl = await persistImageFromUrl(supabase, result.imageUrl, channelId);
+
+      // Build message content with markdown image
+      const caption = result.revisedPrompt || imagePrompt;
+      const content = `**${caption}**\n\n![Generated image](${permanentUrl})`;
+
+      // Insert message with attachments metadata
+      const { data: artistMsg } = await supabase.from("messages").insert({
+        channel_id: channelId,
+        sender_type: "agent",
+        sender_id: agent.id,
+        content,
+        metadata: {
+          model: agent.model,
+          original_prompt: imagePrompt,
+          attachments: [{
+            url: permanentUrl,
+            filename: "generated-image.png",
+            contentType: "image/png",
+            size: 0,
+          }],
+        },
+      }).select("id").single();
+
+      // Fire-and-forget embedding
+      if (artistMsg?.id) {
+        embedMessage(artistMsg.id, content).catch(() => {});
+      }
+
+      // Update agent run
+      if (agentRun?.id) {
+        const durationMs = Date.now() - new Date(runStartedAt).getTime();
+        await supabase.from("agent_runs").update({
+          status: "completed",
+          output_summary: `Generated image: ${caption.slice(0, 200)}`,
+          duration_ms: durationMs,
+          completed_at: new Date().toISOString(),
+        }).eq("id", agentRun.id);
+      }
+
+      // Broadcast done
+      await broadcastChannel.send({
+        type: "broadcast",
+        event: "token",
+        payload: {
+          agentId: agent.id,
+          agentHandle: agent.handle,
+          content,
+          done: true,
+        },
+      });
+    } catch (err) {
+      console.error("@artist error:", err);
+      if (agentRun?.id) {
+        const durationMs = Date.now() - new Date(runStartedAt).getTime();
+        await supabase.from("agent_runs").update({
+          status: "failed",
+          error: err instanceof Error ? err.message : "Unknown error",
+          duration_ms: durationMs,
+          completed_at: new Date().toISOString(),
+        }).eq("id", agentRun.id);
+      }
+      await broadcastChannel.send({
+        type: "broadcast",
+        event: "token",
+        payload: {
+          agentId: agent.id,
+          agentHandle: agent.handle,
+          content: `⚠️ Error generating image: ${err instanceof Error ? err.message : "Unknown error"}`,
+          done: true,
+        },
+      });
+    } finally {
+      broadcastClient.removeChannel(broadcastChannel);
+    }
+    return NextResponse.json({ success: true });
+  }
 
   // For researcher agent: search the web first and inject results into context
   const isResearcher = agent.handle === "researcher";
@@ -197,7 +317,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Insert final message into DB
-    await supabase.from("messages").insert({
+    const { data: agentMsg } = await supabase.from("messages").insert({
       channel_id: channelId,
       sender_type: "agent",
       sender_id: agent.id,
@@ -206,7 +326,12 @@ export async function POST(req: NextRequest) {
         model: agent.model,
         ...(searchSources.length > 0 && { sources: searchSources }),
       },
-    });
+    }).select("id").single();
+
+    // Fire-and-forget embedding
+    if (agentMsg?.id) {
+      embedMessage(agentMsg.id, fullContent).catch(() => {});
+    }
 
     // Update agent run as completed
     if (agentRun?.id) {

@@ -1,5 +1,6 @@
-import { Trash2 } from "lucide-react";
+import { Trash2, FileText, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import type { Attachment } from "@/lib/types";
 
 interface AgentInfo {
   handle: string;
@@ -16,6 +17,7 @@ interface MessageBubbleProps {
   model?: string;
   content: string;
   timestamp: string;
+  attachments?: Attachment[];
   agents?: AgentInfo[];
   onDelete?: () => void;
 }
@@ -29,6 +31,7 @@ export function MessageBubble({
   model,
   content,
   timestamp,
+  attachments,
   agents = [],
   onDelete,
 }: MessageBubbleProps) {
@@ -81,6 +84,41 @@ export function MessageBubble({
               {renderUserContent(content, agents)}
             </span>
           )}
+          {attachments && attachments.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {attachments.map((att, i) =>
+                att.contentType.startsWith("image/") ? (
+                  <a
+                    key={i}
+                    href={att.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <img
+                      src={att.url}
+                      alt={att.filename}
+                      className="max-w-md rounded-lg border border-[#E0E0E0] cursor-pointer hover:shadow-md transition-shadow"
+                    />
+                  </a>
+                ) : (
+                  <a
+                    key={i}
+                    href={att.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-[#E0E0E0] bg-[#F8F8F8] px-3 py-2 hover:bg-[#F0F0F0] transition-colors"
+                  >
+                    <FileText className="h-5 w-5 text-[#616061]" />
+                    <div>
+                      <div className="text-[13px] font-medium text-[#1D1C1D]">{att.filename}</div>
+                      <div className="text-[11px] text-[#616061]">{formatBytes(att.size)}</div>
+                    </div>
+                    <Download className="h-4 w-4 text-[#616061]" />
+                  </a>
+                )
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -98,6 +136,12 @@ export function MessageBubble({
       )}
     </div>
   );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function renderUserContent(content: string, agents: AgentInfo[]) {
@@ -184,4 +228,17 @@ const markdownComponents = {
       {children}
     </a>
   ),
+  img: ({ alt, src, ...props }: React.ComponentProps<"img">) => {
+    const srcStr = typeof src === "string" ? src : undefined;
+    return (
+      <a href={srcStr} target="_blank" rel="noopener noreferrer">
+        <img
+          alt={alt}
+          src={srcStr}
+          className="max-w-md rounded-lg border border-[#E0E0E0] my-2 cursor-pointer hover:shadow-md transition-shadow"
+          {...props}
+        />
+      </a>
+    );
+  },
 };
