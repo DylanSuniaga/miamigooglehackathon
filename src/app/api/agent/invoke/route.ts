@@ -572,11 +572,11 @@ ${memoryBlock}
     }
   }
 
-  // ===== @researcher: web search pre-processing =====
-  const isResearcher = agent.handle === "researcher";
+  // ===== Web search for ANY agent with web_search tool =====
+  const hasWebSearch = enabledTools.includes("web_search");
   let searchSources: { title: string; url: string }[] = [];
 
-  if (isResearcher) {
+  if (hasWebSearch) {
     await broadcastChannel.send({
       type: "broadcast",
       event: "token",
@@ -591,13 +591,18 @@ ${memoryBlock}
     const searchQuery = lastUserMsg?.content?.replace(/@\w+/g, "").trim() ?? "";
 
     if (searchQuery) {
-      const searchResult = await webSearch(searchQuery);
-      searchSources = searchResult.results.map((r) => ({ title: r.title, url: r.url }));
+      try {
+        const searchResult = await webSearch(searchQuery);
+        searchSources = searchResult.results.map((r) => ({ title: r.title, url: r.url }));
 
-      const sourcesBlock = searchResult.results
-        .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`)
-        .join("\n\n");
-      effectiveSystemPrompt += `\n\n--- WEB SEARCH RESULTS ---\nQuery: "${searchQuery}"\n${searchResult.answer ? `Summary: ${searchResult.answer}\n` : ""}\n${sourcesBlock}\n--- END SEARCH RESULTS ---\n\nUse the above search results to ground your response. Cite sources using markdown links.`;
+        const sourcesBlock = searchResult.results
+          .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`)
+          .join("\n\n");
+        effectiveSystemPrompt += `\n\n--- WEB SEARCH RESULTS ---\nQuery: "${searchQuery}"\n${searchResult.answer ? `Summary: ${searchResult.answer}\n` : ""}\n${sourcesBlock}\n--- END SEARCH RESULTS ---\n\nUse the above search results to ground your response. Cite sources using markdown links.`;
+      } catch (searchErr) {
+        console.error(`Web search failed for @${agentHandle}:`, searchErr);
+        effectiveSystemPrompt += `\n\n--- WEB SEARCH ERROR ---\nWeb search failed: ${searchErr instanceof Error ? searchErr.message : "Unknown error"}. Respond based on your training knowledge and inform the user that live search was unavailable.\n--- END ---`;
+      }
     }
   }
 
@@ -741,9 +746,10 @@ ${memoryBlock}
     if (hasAgentSpecBlock(fullContent)) {
       const spec = extractAgentSpecBlock(fullContent);
       if (spec) {
-        await supabase.from("agents").insert({
+        const sanitizedHandle = spec.handle.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+        const { data: newAgent, error: specError } = await supabase.from("agents").insert({
           workspace_id: WORKSPACE_ID,
-          handle: spec.handle,
+          handle: sanitizedHandle,
           display_name: spec.display_name,
           avatar_emoji: spec.avatar_emoji ?? "🤖",
           color: spec.color ?? "#378ADD",
@@ -753,12 +759,18 @@ ${memoryBlock}
           agent_type: spec.agent_type ?? "thinking",
           description: spec.description ?? null,
           system_prompt: spec.system_prompt,
-          tools: spec.tools ?? [],
-        });
+          tools: spec.tools ?? ["run_code", "read_docs", "query_channel"],
+        }).select("id, handle, tools").single();
+
+        if (specError) {
+          console.error(`Failed to create agent @${sanitizedHandle}:`, specError);
+        } else {
+          console.log(`✅ Created agent @${newAgent.handle} with tools:`, newAgent.tools);
+        }
       }
     }
 
-    // Append sources section for researcher
+    // Append sources section for any agent that did a web search
     if (searchSources.length > 0) {
       const uniqueSources = searchSources.filter(
         (s, i, arr) => arr.findIndex((x) => x.url === s.url) === i
@@ -799,6 +811,7 @@ ${memoryBlock}
         completed_at: new Date().toISOString(),
         steps: [
           { step: "started" },
+          ...(hasWebSearch && searchSources.length > 0 ? [{ step: "web_search", results: searchSources.length }] : []),
           ...(shouldSelfReview ? [{ step: "code_self_review" }] : []),
           { step: "completed", durationMs },
         ],

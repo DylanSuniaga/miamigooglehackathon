@@ -1,8 +1,8 @@
-# Hivemind — Implementation Plan
+# Gibert — Implementation Plan
 
 ## Context
 
-Building **Hivemind** for a hackathon: a channel-based AI workspace where teams collaborate with AI agents as first-class participants. Agents brainstorm, critique, architect, and research alongside humans. Auth is deferred — focus on getting agents and the platform working first.
+Building **Gibert** for a hackathon: a channel-based AI workspace where teams collaborate with AI agents as first-class participants. Agents brainstorm, critique, architect, and research alongside humans. Auth is deferred — focus on getting agents and the platform working first.
 
 **Repo:** https://github.com/DylanSuniaga/miamigooglehackathon.git
 
@@ -54,7 +54,7 @@ Building **Hivemind** for a hackathon: a channel-based AI workspace where teams 
 ### Step 1: Project Scaffold
 **Goal:** Empty Next.js 16 app running locally, ready to push to repo.
 
-- `npx create-next-app@canary hivemind --typescript --tailwind --app`
+- `npx create-next-app@canary gibert --typescript --tailwind --app`
 - Install core deps: `@supabase/supabase-js @supabase/ssr ai @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google zod react-markdown date-fns`
 - `npx shadcn@latest init`
 - Add shadcn components: `button input textarea tabs badge scroll-area avatar separator tooltip`
@@ -414,7 +414,7 @@ $$;
 
 -- SEED DATA
 insert into workspaces (id, name) values
-  ('00000000-0000-0000-0000-000000000001', 'Hivemind HQ');
+  ('00000000-0000-0000-0000-000000000001', 'Gibert HQ');
 
 insert into channels (id, workspace_id, name, description, is_default) values
   ('00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000001', 'general', 'General discussion', true),

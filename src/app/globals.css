@@ -49,7 +49,7 @@
 }
 
 :root {
-  /* Hivemind app tokens */
+  /* Gibert app tokens */
   --hm-text: #1D1C1D;
   --hm-muted: #616061;
   --hm-muted-light: #ABABAD;
@@ -99,7 +99,7 @@
 }
 
 .dark {
-  /* Hivemind app tokens — dark */
+  /* Gibert app tokens — dark */
   --hm-text: #E0E0E0;
   --hm-muted: #9E9E9E;
   --hm-muted-light: #757575;

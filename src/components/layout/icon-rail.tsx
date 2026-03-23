@@ -4,7 +4,6 @@ import {
   MessageSquare,
   Users,
   Bot,
-  Mail,
   Calendar,
   Sun,
   Moon,
@@ -16,13 +15,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export type AppView = "messages" | "agents" | "calendar";
+export type AppView = "messages" | "agents" | "people" | "calendar";
 
 const NAV_ITEMS = [
   { icon: MessageSquare, label: "Messages", view: "messages" as AppView },
   { icon: Bot, label: "Agents", view: "agents" as AppView },
-  { icon: Users, label: "People" },
-  { icon: Mail, label: "Mail" },
+  { icon: Users, label: "People", view: "people" as AppView },
   { icon: Calendar, label: "Calendar", view: "calendar" as AppView },
 ];
 
@@ -37,7 +35,7 @@ export function IconRail({ activeView = "messages", onViewChange }: IconRailProp
   return (
     <div className="flex w-[60px] flex-col items-center bg-[var(--hm-icon-rail)] border-r border-[var(--hm-icon-rail)] py-4">
       {/* Logo */}
-      <img src="/logo2.png" alt="Hivemind" className="mb-4 h-9 w-9 rounded-full object-cover" />
+      <img src="/logo2.png" alt="Gibert" className="mb-4 h-9 w-9 rounded-full object-cover" />
 
       <div className="flex flex-1 flex-col items-center gap-2">
         {NAV_ITEMS.map((item) => {
