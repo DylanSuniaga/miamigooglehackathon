@@ -53,12 +53,6 @@ Open [http://localhost:3000](http://localhost:3000).
 - Phase 2: Thinking Agents (AI streaming responses)
 - Phase 5: Agent Management Layer (config editor, context injection, run history)
 
-## Repo
-
-https://github.com/DylanSuniaga/miamigooglehackathon.git
----
-
-## Phase 6 Extensions
 
 ### Features Added
 
