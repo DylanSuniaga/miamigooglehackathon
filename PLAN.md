@@ -10,6 +10,9 @@ Primary audience: Technical founders, AI engineers, and product managers at prod
 
 Building **Gibert** for a hackathon: a channel-based AI workspace where teams collaborate with AI agents as first-class participants. Agents brainstorm, critique, architect, and research alongside humans. Auth is deferred — focus on getting agents and the platform working first.
 
+By nature, this platform should serve as a powerful tool for businesses to get a taste of Artificial Intellgience with the lowest barrier of access as possible. 
+
+
 **Repo:** https://github.com/DylanSuniaga/miamigooglehackathon.git
 
 ---
@@ -639,10 +642,6 @@ Renamed to **"Launch Agent"** in `src/components/layout/channel-header.tsx`.
   - Get token at: https://context7.com
 - Enable tools per-agent via `agents.tools` JSONB in Agent Manager.
 
-### 4. LaTeX Rendering in Chat
-- `$...$` → KaTeX InlineMath, `$$...$$` → KaTeX BlockMath
-- Rendered via `react-katex` in `message-bubble.tsx`
-- Graceful fallback on parse failure.
 
 ### 5. Universal Agent Instructions
 - Panel: **Agent Manager → Instructions tab** (globe icon)
